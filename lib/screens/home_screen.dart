@@ -111,24 +111,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _joinOrEnter(Channel ch) async {
-    // First: check if we're actually a member (role might be null in search results,
-    // or stale after reinstall). This is the source of truth.
-    try {
-      final st = await widget.api.joinStatus(ch.id) as Map<String, dynamic>;
-      if (!mounted) return;
-      if (st['status'] == 'member') {
-        widget.onJoined(ch);
-        return;
-      }
-    } catch (_) {}
-
-    // If we have role from search (myChannels list) — trust it
+    // Simple rule: if channel is in myChannels (we have role) — enter directly.
+    // Otherwise — show dialog for private, join for open.
     if (ch.role != null) {
       widget.onJoined(ch);
       return;
     }
 
-    // Otherwise — request to join
+    // Not a member — need to join
     if (ch.isPrivate) {
       final confirm = await showDialog<bool>(
         context: context,

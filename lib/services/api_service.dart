@@ -130,6 +130,10 @@ class ApiService {
     await _req('POST', '/channels/$channelId/leave');
   }
 
+  Future<void> deleteChannel(int channelId) async {
+    await _req('DELETE', '/channels/$channelId');
+  }
+
   Future<Map<String, dynamic>> joinStatus(int channelId) async {
     return _req('GET', '/channels/$channelId/join_status');
   }

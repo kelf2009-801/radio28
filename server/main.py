@@ -510,6 +510,24 @@ def leave_channel(cid: int, user: sqlite3.Row = Depends(current_user)):
     return {"ok": True}
 
 
+@app.delete("/channels/{cid}")
+def delete_channel(cid: int, user: sqlite3.Row = Depends(current_user)):
+    with get_db() as conn:
+        m = conn.execute(
+            "SELECT role FROM members WHERE channel_id = ? AND user_id = ?",
+            (cid, user["id"]),
+        ).fetchone()
+        if not m or m["role"] != "creator":
+            raise HTTPException(403, "only_creator")
+        # Delete everything related
+        conn.execute("DELETE FROM channels WHERE id = ?", (cid,))
+        conn.execute("DELETE FROM members WHERE channel_id = ?", (cid,))
+        conn.execute("DELETE FROM join_requests WHERE channel_id = ?", (cid,))
+        conn.execute("DELETE FROM bans WHERE channel_id = ?", (cid,))
+        conn.execute("DELETE FROM history WHERE channel_id = ?", (cid,))
+    return {"ok": True}
+
+
 # ---------------- members / admin ----------------
 
 @app.get("/channels/{cid}/members")

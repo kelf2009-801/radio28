@@ -105,6 +105,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               if (ch.isCreator)
                 ListTile(
+                  leading: const Icon(Icons.delete_outline, color: AppTheme.danger),
+                  title: const Text('Удалить канал', style: TextStyle(color: AppTheme.danger)),
+                  subtitle: const Text('Безвозвратно. Все участники вылетят.',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                  onTap: _deleteChannel,
+                ),
+              if (ch.isCreator)
+                ListTile(
                   leading: const Icon(Icons.qr_code, color: AppTheme.accent),
                   title: const Text('Код-приглашение'),
                   subtitle: const Text('Сгенерить новый (старый перестанет работать)',
@@ -250,6 +258,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
+    }
+  }
+
+  Future<void> _deleteChannel() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить канал?'),
+        content: Text(
+          'Канал «${widget.channel!.name}» будет удалён безвозвратно.\nВсе участники вылетят.',
+          style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await widget.api.deleteChannel(widget.channel!.id);
+      if (mounted) {
+        widget.onLeaveChannel(); // exit to home screen
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Канал удалён')),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));

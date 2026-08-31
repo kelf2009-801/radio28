@@ -77,12 +77,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _joinOrEnter(Channel ch) async {
-    // If already member — enter directly
-    if (ch.role != null) {
-      widget.onJoined(ch);
-      return;
-    }
-    // Check if we're actually a member (role might be null in search results)
+    // First: check if we're actually a member (role might be null in search results,
+    // or stale after reinstall). This is the source of truth.
     try {
       final st = await widget.api.joinStatus(ch.id) as Map<String, dynamic>;
       if (!mounted) return;
@@ -91,6 +87,12 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
     } catch (_) {}
+
+    // If we have role from search (myChannels list) — trust it
+    if (ch.role != null) {
+      widget.onJoined(ch);
+      return;
+    }
 
     // Otherwise — request to join
     if (ch.isPrivate) {

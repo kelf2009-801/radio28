@@ -93,14 +93,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
               onTap: _pickAvatarPhoto,
             ),
-            ListTile(
-              leading: const Icon(Icons.route_outlined, color: AppTheme.textSecondary),
-              title: const Text('Маршрут'),
-              subtitle: Text(p?.route ?? 'не указан',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-              trailing: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.textMuted),
-              onTap: _editRoute,
-            ),
           ]),
           if (ch != null) ...[
             _group('Канал', [
@@ -298,32 +290,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ],
     );
-  }
-
-  Future<void> _editRoute() async {
-    final p = widget.auth.profile as Profile?;
-    final ctrl = TextEditingController(text: p?.route ?? '');
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Маршрут'),
-        content: TextField(
-          controller: ctrl,
-          maxLength: 12,
-          decoration: const InputDecoration(hintText: 'Например, №28', counterText: ''),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Сохранить', style: TextStyle(color: AppTheme.accent)),
-          ),
-        ],
-      ),
-    );
-    if (result == null) return;
-    await widget.onUpdateProfile(result.isEmpty ? null : result);
-    if (mounted) setState(() {});
   }
 
   Future<void> _editCallsign() async {

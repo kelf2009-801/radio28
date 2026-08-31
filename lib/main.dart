@@ -11,7 +11,6 @@ import 'screens/members_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/pending_screen.dart';
 import 'screens/radio_screen.dart';
-import 'screens/requests_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';

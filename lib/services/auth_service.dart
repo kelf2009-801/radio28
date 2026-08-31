@@ -30,7 +30,10 @@ class AuthService {
   Profile? profile;
   String? sessionToken;
 
-  static const defaultServer = 'http://127.0.0.1:8000';
+  static const defaultServer = String.fromEnvironment(
+    'RADIO_SERVER',
+    defaultValue: 'http://192.168.0.191:8000', // домашний комп Андрея (LAN); на VPS заменю при сборке
+  );
 
   Future<String> get serverUrl async {
     final prefs = await SharedPreferences.getInstance();

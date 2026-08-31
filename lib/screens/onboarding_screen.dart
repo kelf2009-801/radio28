@@ -33,7 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     try {
       await widget.onDone(cs, _route.text.trim());
     } catch (e) {
-      _toast('Ошибка: $e');
+      _toast('Нет связи с сервером. Проверь интернет и попробуй ещё раз.');
       if (mounted) setState(() => _busy = false);
     }
   }

@@ -4,20 +4,23 @@ import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 import '../models/models.dart';
+import 'create_channel_screen.dart';
 
 /// Channel search + join flow (open -> instant, private -> request to admin,
-/// invite code -> auto accept).
+/// invite code -> auto accept). FAB creates a new channel.
 class ChannelSearchScreen extends StatefulWidget {
   const ChannelSearchScreen({
     super.key,
     required this.api,
     required this.onJoined,
     required this.onPending,
+    required this.onCreated,
   });
 
   final dynamic api; // ApiService (kept dynamic to avoid import cycles in tests)
   final void Function(Channel channel) onJoined;
   final void Function(Channel channel) onPending;
+  final void Function(Channel channel) onCreated;
 
   @override
   State<ChannelSearchScreen> createState() => _ChannelSearchScreenState();
@@ -129,6 +132,19 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Найти канал')),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppTheme.accent,
+        foregroundColor: Colors.black,
+        icon: const Icon(Icons.add),
+        label: const Text('Создать канал', style: TextStyle(fontWeight: FontWeight.w700)),
+        onPressed: () async {
+          final created = await Navigator.push<Channel>(
+            context,
+            MaterialPageRoute(builder: (_) => CreateChannelScreen(api: widget.api, onCreated: (ch) => Navigator.pop(context, ch))),
+          );
+          if (created != null) widget.onCreated(created);
+        },
+      ),
       body: Column(
         children: [
           Padding(

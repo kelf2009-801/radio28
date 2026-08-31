@@ -104,9 +104,10 @@ class ApiService {
     return (j['channels'] as List).map((e) => Channel.fromJson(e)).toList();
   }
 
-  Future<Channel> createChannel(String name, {String? inviteCode}) async {
+  Future<Channel> createChannel(String name, {String? inviteCode, bool isPrivate = true}) async {
     final j = await _req('POST', '/channels', body: {
       'name': name,
+      'is_private': isPrivate,
       if (inviteCode != null && inviteCode.isNotEmpty) 'invite_code': inviteCode,
     });
     return Channel.fromJson(j['channel']);

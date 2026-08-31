@@ -130,7 +130,18 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
     await api.login();
     await ws.connect();
     _listenWs();
-    if (mounted) setState(() => _hasIdentity = true);
+    // If this is the server's first account, it owns the seeded "Сызрань-28" channel.
+    Channel? initial;
+    try {
+      final mine = await api.myChannels();
+      if (mine.isNotEmpty) initial = mine.first;
+    } catch (_) {}
+    if (mounted) {
+      setState(() {
+        _hasIdentity = true;
+        if (initial != null) _activeChannel = initial;
+      });
+    }
   }
 
   void _onJoined(Channel ch) {
@@ -195,6 +206,7 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
         api: api,
         onJoined: _onJoined,
         onPending: _onPending,
+        onCreated: _onJoined,
       );
     }
 

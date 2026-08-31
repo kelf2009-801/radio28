@@ -214,6 +214,7 @@ def _startup():
     init_db()
 
 
+
 @app.get("/health")
 def health():
     return {"status": "ok", "ts": time.time()}
@@ -237,6 +238,7 @@ class LoginBody(BaseModel):
 class ChannelBody(BaseModel):
     name: str
     invite_code: Optional[str] = None
+    is_private: bool = True
 
 
 class JoinBody(BaseModel):
@@ -256,6 +258,7 @@ class MuteBody(BaseModel):
 @app.post("/auth/register")
 def register(body: RegisterBody):
     with get_db() as conn:
+        is_first_user = conn.execute("SELECT 1 FROM users LIMIT 1").fetchone() is None
         existing = conn.execute("SELECT id FROM users WHERE id = ?", (body.user_id,)).fetchone()
         if existing:
             # idempotent re-register (reinstall keeps uuid) — update callsign
@@ -268,7 +271,21 @@ def register(body: RegisterBody):
                 "INSERT INTO users (id, callsign, route, public_key, created_at) VALUES (?,?,?,?,?)",
                 (body.user_id, body.callsign, body.route, body.public_key, time.time()),
             )
-    return {"ok": True}
+        # The very first account on a fresh server owns the default private channel.
+        if is_first_user:
+            seed_name = os.environ.get("SEED_CHANNEL_NAME", "Сызрань-28")
+            ch = conn.execute("SELECT id FROM channels WHERE name = ?", (seed_name,)).fetchone()
+            if not ch:
+                cur = conn.execute(
+                    "INSERT INTO channels (name, is_private, invite_code, creator_id, created_at) "
+                    "VALUES (?,?,?,?,?)",
+                    (seed_name, 1, None, body.user_id, time.time()),
+                )
+                conn.execute(
+                    "INSERT INTO members (channel_id, user_id, role, joined_at) VALUES (?,?,?,?)",
+                    (cur.lastrowid, body.user_id, "creator", time.time()),
+                )
+    return {"ok": True, "first_user": is_first_user}
 
 
 @app.get("/auth/challenge")
@@ -358,7 +375,7 @@ def create_channel(body: ChannelBody, user: sqlite3.Row = Depends(current_user))
             cur = conn.execute(
                 "INSERT INTO channels (name, is_private, invite_code, creator_id, created_at) "
                 "VALUES (?,?,?,?,?)",
-                (name, 1, body.invite_code or None, user["id"], time.time()),
+                (name, 1 if body.is_private else 0, body.invite_code or None, user["id"], time.time()),
             )
         except sqlite3.IntegrityError:
             raise HTTPException(409, "channel_exists")
@@ -397,6 +414,13 @@ def join_channel(cid: int, body: JoinBody, user: sqlite3.Row = Depends(current_u
             "SELECT role FROM members WHERE channel_id = ? AND user_id = ?", (cid, user["id"])
         ).fetchone()
         if existing:
+            return {"status": "member"}
+        # open channel — instant member
+        if not ch["is_private"]:
+            conn.execute(
+                "INSERT INTO members (channel_id, user_id, role, joined_at) VALUES (?,?,?,?)",
+                (cid, user["id"], "member", time.time()),
+            )
             return {"status": "member"}
         # invite code = instant accept
         if ch["invite_code"] and body.invite_code and secrets.compare_digest(

@@ -353,7 +353,7 @@ def _channel_json(conn: sqlite3.Connection, row: sqlite3.Row, user_id: Optional[
 
 
 @app.get("/channels/search")
-def search_channels(q: str = Query(default=""), user: sqlite3.Row = Depends(current_user)):
+def search_channels(q: Optional[str] = Query(None), user: sqlite3.Row = Depends(current_user)):
     with get_db() as conn:
         if q and len(q) >= 2:
             rows = conn.execute(
@@ -361,7 +361,7 @@ def search_channels(q: str = Query(default=""), user: sqlite3.Row = Depends(curr
                 (f"%{q}%",),
             ).fetchall()
         else:
-            # Empty query = list all channels
+            # No query = list all channels
             rows = conn.execute(
                 "SELECT * FROM channels ORDER BY created_at DESC LIMIT 50",
             ).fetchall()

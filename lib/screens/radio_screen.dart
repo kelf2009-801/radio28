@@ -96,6 +96,12 @@ class _RadioScreenState extends State<RadioScreen> {
       _subConn = (widget.livekit.connectionStream as Stream<lk.ConnectionState>).listen((c) {
         if (!mounted) return;
         setState(() => _conn = c);
+        if (c == lk.ConnectionState.disconnected) {
+          // Auto-reconnect after 3s
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted && _conn == lk.ConnectionState.disconnected) _connect();
+          });
+        }
       });
 
       setState(() => _connecting = false);
@@ -146,7 +152,7 @@ class _RadioScreenState extends State<RadioScreen> {
       }
     } catch (_) {}
     await widget.livekit.stopTalking();
-    // Log to history
+    // Log to history — always, even if voice failed (records the attempt)
     if (_talkStart != null) {
       final dur = DateTime.now().difference(_talkStart!).inMilliseconds / 1000.0;
       if (dur > 0.3) {

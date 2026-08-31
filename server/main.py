@@ -97,9 +97,16 @@ CREATE TABLE IF NOT EXISTS history (
     started_at REAL NOT NULL,
     duration_sec REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS favorites (
+    user_id TEXT NOT NULL,
+    channel_id INTEGER NOT NULL,
+    created_at REAL NOT NULL,
+    PRIMARY KEY (user_id, channel_id)
+);
 CREATE INDEX IF NOT EXISTS idx_history_channel ON history(channel_id, started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_req_channel ON join_requests(channel_id, status);
 CREATE INDEX IF NOT EXISTS idx_members_channel ON members(channel_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
 """
 
 
@@ -321,12 +328,18 @@ def _channel_json(conn: sqlite3.Connection, row: sqlite3.Row, user_id: Optional[
         "SELECT COUNT(*) AS c FROM members WHERE channel_id = ?", (row["id"],)
     ).fetchone()["c"]
     role = None
+    is_fav = False
     if user_id:
         m = conn.execute(
             "SELECT role FROM members WHERE channel_id = ? AND user_id = ?",
             (row["id"], user_id),
         ).fetchone()
         role = m["role"] if m else None
+        f = conn.execute(
+            "SELECT 1 FROM favorites WHERE channel_id = ? AND user_id = ?",
+            (row["id"], user_id),
+        ).fetchone()
+        is_fav = f is not None
     return {
         "id": row["id"],
         "name": row["name"],
@@ -334,6 +347,8 @@ def _channel_json(conn: sqlite3.Connection, row: sqlite3.Row, user_id: Optional[
         "has_invite_code": bool(row["invite_code"]),
         "member_count": member_count,
         "role": role,
+        "is_direct": False,  # TODO: implement direct calls
+        "is_favorite": is_fav,
     }
 
 
@@ -526,6 +541,35 @@ def delete_channel(cid: int, user: sqlite3.Row = Depends(current_user)):
         conn.execute("DELETE FROM bans WHERE channel_id = ?", (cid,))
         conn.execute("DELETE FROM history WHERE channel_id = ?", (cid,))
     return {"ok": True}
+
+
+@app.post("/channels/{cid}/favorite")
+def toggle_favorite(cid: int, user: sqlite3.Row = Depends(current_user)):
+    with get_db() as conn:
+        existing = conn.execute(
+            "SELECT 1 FROM favorites WHERE channel_id = ? AND user_id = ?",
+            (cid, user["id"]),
+        ).fetchone()
+        if existing:
+            conn.execute("DELETE FROM favorites WHERE channel_id = ? AND user_id = ?", (cid, user["id"]))
+            return {"favorited": False}
+        else:
+            conn.execute(
+                "INSERT INTO favorites (channel_id, user_id, created_at) VALUES (?,?,?)",
+                (cid, user["id"], time.time()),
+            )
+            return {"favorited": True}
+
+
+@app.get("/channels/favorites")
+def list_favorites(user: sqlite3.Row = Depends(current_user)):
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT c.* FROM channels c JOIN favorites f ON f.channel_id = c.id "
+            "WHERE f.user_id = ? ORDER BY f.created_at DESC",
+            (user["id"],),
+        ).fetchall()
+        return {"channels": [_channel_json(conn, r, user["id"]) for r in rows]}
 
 
 # ---------------- members / admin ----------------

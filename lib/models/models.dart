@@ -51,6 +51,8 @@ class Channel {
   final bool hasInviteCode;
   final int memberCount;
   final String? role; // null = not a member; 'creator' | 'admin' | 'member'
+  final bool isDirect; // true = private 1-on-1 call channel
+  final bool isFavorite; // true = user starred this channel
 
   const Channel({
     required this.id,
@@ -59,6 +61,8 @@ class Channel {
     this.hasInviteCode = false,
     this.memberCount = 0,
     this.role,
+    this.isDirect = false,
+    this.isFavorite = false,
   });
 
   factory Channel.fromJson(Map<String, dynamic> j) => Channel(
@@ -68,6 +72,19 @@ class Channel {
         hasInviteCode: j['has_invite_code'] as bool? ?? false,
         memberCount: j['member_count'] as int? ?? 0,
         role: j['role'] as String?,
+        isDirect: j['is_direct'] as bool? ?? false,
+        isFavorite: j['is_favorite'] as bool? ?? false,
+      );
+
+  Channel copyWith({bool? isFavorite}) => Channel(
+        id: id,
+        name: name,
+        isPrivate: isPrivate,
+        hasInviteCode: hasInviteCode,
+        memberCount: memberCount,
+        role: role,
+        isDirect: isDirect,
+        isFavorite: isFavorite ?? this.isFavorite,
       );
 
   bool get isAdmin => role == 'creator' || role == 'admin';

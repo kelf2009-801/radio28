@@ -134,6 +134,16 @@ class ApiService {
     await _req('DELETE', '/channels/$channelId');
   }
 
+  Future<bool> toggleFavorite(int channelId) async {
+    final j = await _req('POST', '/channels/$channelId/favorite');
+    return j['favorited'] as bool;
+  }
+
+  Future<List<Channel>> favorites() async {
+    final j = await _req('GET', '/channels/favorites');
+    return (j['channels'] as List).map((e) => Channel.fromJson(e)).toList();
+  }
+
   Future<Map<String, dynamic>> joinStatus(int channelId) async {
     return _req('GET', '/channels/$channelId/join_status');
   }

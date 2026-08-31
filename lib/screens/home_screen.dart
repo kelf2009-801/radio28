@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
@@ -28,15 +30,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Channel> _myChannels = [];
+  List<Channel> _favorites = [];
   List<Channel> _searchResults = [];
   final _searchCtrl = TextEditingController();
   bool _loading = true;
   bool _searching = false;
+  int _tabIndex = 0; // 0 = Мои каналы, 1 = Избранное
 
   @override
   void initState() {
     super.initState();
-    _loadMyChannels();
+    _loadAll();
     _searchCtrl.addListener(_onSearchChanged);
   }
 
@@ -46,18 +50,48 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _loadMyChannels() async {
+  Future<void> _loadAll() async {
     try {
       final mine = await widget.api.myChannels() as List<Channel>;
+      final favs = await widget.api.favorites() as List<Channel>;
       if (mounted) {
         setState(() {
           _myChannels = mine;
+          _favorites = favs;
           _loading = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _toggleFavorite(Channel ch) async {
+    try {
+      final favorited = await widget.api.toggleFavorite(ch.id) as bool;
+      if (mounted) {
+        setState(() {
+          // Update in both lists
+          _myChannels = _myChannels.map((c) =>
+            c.id == ch.id ? c.copyWith(isFavorite: favorited) : c
+          ).toList();
+          _favorites = _favorites.map((c) =>
+            c.id == ch.id ? c.copyWith(isFavorite: favorited) : c
+          ).toList();
+          if (!favorited) {
+            _favorites.removeWhere((c) => c.id == ch.id);
+          } else if (!_favorites.any((c) => c.id == ch.id)) {
+            _favorites.add(ch.copyWith(isFavorite: true));
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(favorited ? 'Добавлено в избранное' : 'Убрано из избранного'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (_) {}
   }
 
   Future<void> _onSearchChanged() async {
@@ -172,103 +206,256 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+      drawer: _buildDrawer(),
       body: RefreshIndicator(
         color: AppTheme.accent,
-        onRefresh: _loadMyChannels,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        onRefresh: _loadAll,
+        child: _tabIndex == 0 ? _buildMyChannels() : _buildFavorites(),
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    final p = widget.auth.profile;
+    return Drawer(
+      backgroundColor: AppTheme.surface,
+      child: SafeArea(
+        child: Column(
           children: [
-            // Search field
-            TextField(
-              controller: _searchCtrl,
-              decoration: InputDecoration(
-                hintText: 'Найти канал...',
-                prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted),
-                suffixIcon: _searching
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                      )
-                    : null,
+            // Header with profile
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppTheme.border)),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: AppTheme.accentDim,
+                    backgroundImage: p?.avatarPath != null ? FileImage(File(p!.avatarPath!)) : null,
+                    child: p?.avatarPath == null
+                        ? Text(
+                            p?.callsign.isNotEmpty == true ? p!.callsign[0].toUpperCase() : '?',
+                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.accent),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          p?.callsign ?? '—',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          p?.route ?? 'без маршрута',
+                          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-
-            // Search results (when searching)
-            if (_searchResults.isNotEmpty) ...[
-              const Text('РЕЗУЛЬТАТЫ ПОИСКА', style: TextStyle(fontSize: 11, color: AppTheme.textMuted, letterSpacing: 1)),
-              const SizedBox(height: 8),
-              ..._searchResults.map((ch) => _ChannelCard(
-                    channel: ch,
-                    onTap: () => _joinOrEnter(ch),
-                    showJoinHint: true,
-                  )),
-              const SizedBox(height: 20),
-            ],
-
-            // My channels
-            if (_myChannels.isNotEmpty) ...[
-              const Text('МОИ КАНАЛЫ', style: TextStyle(fontSize: 11, color: AppTheme.textMuted, letterSpacing: 1)),
-              const SizedBox(height: 8),
-              ..._myChannels.map((ch) => _ChannelCard(
-                    channel: ch,
-                    onTap: () => widget.onJoined(ch),
-                    showJoinHint: false,
-                  )),
-              const SizedBox(height: 20),
-            ],
-
-            // Empty state
-            if (_myChannels.isEmpty && _searchResults.isEmpty && !_loading)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Column(
-                  children: [
-                    Icon(Icons.radio, size: 48, color: AppTheme.textMuted),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Пока нет каналов',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Создай свой или найди существующий через поиск выше',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                    ),
-                  ],
+            // Menu items
+            _drawerItem(Icons.radio, 'Все каналы', 0),
+            _drawerItem(Icons.star_outline, 'Избранное', 1),
+            const Divider(color: AppTheme.border),
+            _drawerItem(Icons.history, 'История', null, onTap: () {
+              Navigator.pop(context);
+              // TODO: open history
+            }),
+            _drawerItem(Icons.people_outline, 'Контакты', null, onTap: () {
+              Navigator.pop(context);
+              // TODO: open contacts
+            }),
+            const Divider(color: AppTheme.border),
+            _drawerItem(Icons.settings_outlined, 'Настройки', null, onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SettingsScreen(
+                    auth: widget.auth,
+                    channel: null,
+                    api: widget.api,
+                    onLeaveChannel: () {},
+                    onUpdateProfile: (_) async {},
+                  ),
                 ),
-              ),
-
-            // Create channel button
-            Center(
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final created = await Navigator.push<Channel>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CreateChannelScreen(
-                        api: widget.api,
-                        onCreated: (c) => Navigator.pop(context, c),
-                      ),
-                    ),
-                  );
-                  if (created != null) {
-                    _loadMyChannels();
-                    widget.onJoined(created);
-                  }
-                },
-                icon: const Icon(Icons.add, color: AppTheme.accent),
-                label: const Text('Создать канал', style: TextStyle(color: AppTheme.accent)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppTheme.accent),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
+              );
+            }),
+            const Spacer(),
+            const Divider(color: AppTheme.border),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'SHALUN v1.0.0',
+                style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _drawerItem(IconData icon, String label, int? index, {VoidCallback? onTap}) {
+    final selected = index != null && _tabIndex == index;
+    return ListTile(
+      leading: Icon(icon, color: selected ? AppTheme.accent : AppTheme.textSecondary),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: selected ? AppTheme.accent : AppTheme.textPrimary,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+        ),
+      ),
+      selected: selected,
+      onTap: () {
+        if (index != null) {
+          setState(() => _tabIndex = index);
+          Navigator.pop(context);
+        } else if (onTap != null) {
+          onTap();
+        }
+      },
+    );
+  }
+
+  Widget _buildMyChannels() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Search field
+        TextField(
+          controller: _searchCtrl,
+          decoration: InputDecoration(
+            hintText: 'Найти канал...',
+            prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted),
+            suffixIcon: _searching
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Search results
+        if (_searchResults.isNotEmpty) ...[
+          const Text('РЕЗУЛЬТАТЫ ПОИСКА', style: TextStyle(fontSize: 11, color: AppTheme.textMuted, letterSpacing: 1)),
+          const SizedBox(height: 8),
+          ..._searchResults.map((ch) => _ChannelCard(
+                channel: ch,
+                onTap: () => _joinOrEnter(ch),
+                onFavorite: () => _toggleFavorite(ch),
+                showJoinHint: true,
+              )),
+          const SizedBox(height: 20),
+        ],
+
+        // My channels
+        if (_myChannels.isNotEmpty) ...[
+          const Text('МОИ КАНАЛЫ', style: TextStyle(fontSize: 11, color: AppTheme.textMuted, letterSpacing: 1)),
+          const SizedBox(height: 8),
+          ..._myChannels.map((ch) => _ChannelCard(
+                channel: ch,
+                onTap: () => widget.onJoined(ch),
+                onFavorite: () => _toggleFavorite(ch),
+                showJoinHint: false,
+              )),
+          const SizedBox(height: 20),
+        ],
+
+        // Empty state
+        if (_myChannels.isEmpty && _searchResults.isEmpty && !_loading)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Column(
+              children: [
+                Icon(Icons.radio, size: 48, color: AppTheme.textMuted),
+                const SizedBox(height: 16),
+                const Text(
+                  'Пока нет каналов',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Создай свой или найди существующий через поиск выше',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
+
+        // Create channel button
+        Center(
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              final created = await Navigator.push<Channel>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CreateChannelScreen(
+                    api: widget.api,
+                    onCreated: (c) => Navigator.pop(context, c),
+                  ),
+                ),
+              );
+              if (created != null) {
+                _loadAll();
+                widget.onJoined(created);
+              }
+            },
+            icon: const Icon(Icons.add, color: AppTheme.accent),
+            label: const Text('Создать канал', style: TextStyle(color: AppTheme.accent)),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppTheme.accent),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFavorites() {
+    if (_favorites.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.star_outline, size: 48, color: AppTheme.textMuted),
+            const SizedBox(height: 16),
+            const Text(
+              'Нет избранных каналов',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Нажми ★ на канале чтобы добавить сюда',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        ..._favorites.map((ch) => _ChannelCard(
+              channel: ch,
+              onTap: () => widget.onJoined(ch),
+              onFavorite: () => _toggleFavorite(ch),
+              showJoinHint: false,
+            )),
+      ],
     );
   }
 }
@@ -277,11 +464,13 @@ class _ChannelCard extends StatelessWidget {
   const _ChannelCard({
     required this.channel,
     required this.onTap,
+    required this.onFavorite,
     required this.showJoinHint,
   });
 
   final Channel channel;
   final VoidCallback onTap;
+  final VoidCallback onFavorite;
   final bool showJoinHint;
 
   @override
@@ -315,9 +504,23 @@ class _ChannelCard extends StatelessWidget {
           ].join(),
           style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
-        trailing: showJoinHint && channel.role == null
-            ? const Icon(Icons.chevron_right, color: AppTheme.textMuted)
-            : const Icon(Icons.radio, color: AppTheme.accent),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(
+                channel.isFavorite ? Icons.star : Icons.star_outline,
+                color: channel.isFavorite ? AppTheme.warning : AppTheme.textMuted,
+              ),
+              onPressed: onFavorite,
+              tooltip: channel.isFavorite ? 'Убрать из избранного' : 'В избранное',
+            ),
+            if (showJoinHint && channel.role == null)
+              const Icon(Icons.chevron_right, color: AppTheme.textMuted)
+            else
+              const Icon(Icons.radio, color: AppTheme.accent),
+          ],
+        ),
         onTap: onTap,
       ),
     );

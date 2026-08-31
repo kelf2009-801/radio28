@@ -14,6 +14,7 @@ class MembersScreen extends StatefulWidget {
     required this.myUserId,
     required this.livekit,
     this.embedded = false,
+    this.onJoined,
   });
 
   final Channel channel;
@@ -21,6 +22,7 @@ class MembersScreen extends StatefulWidget {
   final String myUserId;
   final dynamic livekit;
   final bool embedded; // true = shown as bottom-nav tab (no back button)
+  final void Function(Channel channel)? onJoined; // for direct call switch
 
   @override
   State<MembersScreen> createState() => _MembersScreenState();
@@ -79,7 +81,7 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   Future<void> _actions(Member m) async {
-    if (!widget.channel.isAdmin || m.userId == widget.myUserId) return;
+    if (widget.channel.role != 'creator' || m.userId == widget.myUserId) return;
     if (m.role == 'creator') return;
     final act = await showModalBottomSheet<String>(
       context: context,
@@ -140,10 +142,22 @@ class _MembersScreenState extends State<MembersScreen> {
       if (act == 'ban') await widget.api.ban(widget.channel.id, m.userId);
       if (act == 'toggle_admin') await widget.api.setRole(widget.channel.id, m.userId, m.role == 'admin' ? 'member' : 'admin');
       if (act == 'private_call') {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Личный вызов появится в следующей версии')),
-          );
+        // Create direct channel and switch to it
+        try {
+          final direct = await widget.api.createDirectChannel(m.userId) as Channel;
+          if (mounted) {
+            Navigator.pop(context); // close members screen
+            // Switch to the direct channel
+            if (widget.onJoined != null) {
+              widget.onJoined!(direct);
+            }
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Ошибка: $e')),
+            );
+          }
         }
       }
       _load();
@@ -193,7 +207,11 @@ class _MembersScreenState extends State<MembersScreen> {
                   ],
                   if (m.muted) ...[
                     const SizedBox(width: 6),
-                    const Icon(Icons.mic_off, size: 14, color: AppTheme.danger),
+                    Icon(Icons.mic_off, size: 14, color: AppTheme.danger),
+                  ],
+                  if (m.deafened) ...[
+                    const SizedBox(width: 6),
+                    Icon(Icons.volume_off, size: 14, color: AppTheme.warning),
                   ],
                 ],
               ),

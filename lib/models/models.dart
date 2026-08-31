@@ -98,6 +98,7 @@ class Member {
   final String role;
   final bool online;
   final bool muted;
+  final bool deafened;
   final bool speaking;
 
   const Member({
@@ -107,16 +108,18 @@ class Member {
     this.role = 'member',
     this.online = false,
     this.muted = false,
+    this.deafened = false,
     this.speaking = false,
   });
 
-  Member copyWith({bool? online, bool? muted, bool? speaking, String? role}) => Member(
+  Member copyWith({bool? online, bool? muted, bool? deafened, bool? speaking, String? role}) => Member(
         userId: userId,
         callsign: callsign,
         route: route,
         role: role ?? this.role,
         online: online ?? this.online,
         muted: muted ?? this.muted,
+        deafened: deafened ?? this.deafened,
         speaking: speaking ?? this.speaking,
       );
 
@@ -127,6 +130,7 @@ class Member {
         role: j['role'] as String? ?? 'member',
         online: j['online'] as bool? ?? false,
         muted: j['muted'] as bool? ?? false,
+        deafened: j['deafened'] as bool? ?? false,
       );
 
   String get initial => callsign.isEmpty ? '?' : callsign[0].toUpperCase();

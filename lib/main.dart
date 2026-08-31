@@ -235,6 +235,7 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
         myUserId: auth.profile!.userId,
         livekit: livekit,
         embedded: true,
+        onJoined: _onJoined,
       ),
       HistoryScreen(channel: ch, api: api),
       SettingsScreen(

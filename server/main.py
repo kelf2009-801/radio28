@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS members (
     user_id TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'member',  -- creator | admin | member
     muted INTEGER NOT NULL DEFAULT 0,
+    deafened INTEGER NOT NULL DEFAULT 0,
     joined_at REAL NOT NULL,
     PRIMARY KEY (channel_id, user_id)
 );
@@ -245,6 +246,7 @@ class ChannelBody(BaseModel):
     name: str
     invite_code: Optional[str] = None
     is_private: bool = True
+    is_direct: bool = False  # 1-on-1 private call channel
 
 
 class JoinBody(BaseModel):
@@ -257,6 +259,10 @@ class RejectBody(BaseModel):
 
 class MuteBody(BaseModel):
     muted: bool
+
+
+class DeafenBody(BaseModel):
+    deafened: bool
 
 
 class RoleBody(BaseModel):
@@ -277,10 +283,24 @@ def register(body: RegisterBody):
                 (body.callsign, body.route, body.public_key, body.user_id),
             )
         else:
-            conn.execute(
-                "INSERT INTO users (id, callsign, route, public_key, created_at) VALUES (?,?,?,?,?)",
-                (body.user_id, body.callsign, body.route, body.public_key, time.time()),
-            )
+            # Check if callsign already exists — same user with new key (reinstall)
+            by_callsign = conn.execute(
+                "SELECT id FROM users WHERE callsign = ?", (body.callsign,)
+            ).fetchone()
+            if by_callsign:
+                # Update existing user's key and route (same person, new phone/install)
+                # Keep the OLD id — all channels/memberships stay linked
+                conn.execute(
+                    "UPDATE users SET route = ?, public_key = ? WHERE callsign = ?",
+                    (body.route, body.public_key, body.callsign),
+                )
+                # Return the OLD user_id so the app uses it
+                return {"ok": True, "user_id": by_callsign["id"], "existing": True}
+            else:
+                conn.execute(
+                    "INSERT INTO users (id, callsign, route, public_key, created_at) VALUES (?,?,?,?,?)",
+                    (body.user_id, body.callsign, body.route, body.public_key, time.time()),
+                )
         # The very first account on a fresh server owns the default private channel.
         # REMOVED: user creates channels manually via the app UI.
         _ = is_first_user  # noqa: F841 — kept for future use
@@ -403,6 +423,28 @@ def create_channel(body: ChannelBody, user: sqlite3.Row = Depends(current_user))
             "INSERT INTO members (channel_id, user_id, role, joined_at) VALUES (?,?,?,?)",
             (cid, user["id"], "creator", time.time()),
         )
+        # Direct channel: add the other user immediately as member
+        if body.is_direct:
+            # name format: "direct_{userId1}_{userId2}"
+            parts = name.split("_")
+            if len(parts) >= 3:
+                other_id = parts[1] if parts[1] != user["id"] else parts[2]
+                conn.execute(
+                    "INSERT INTO members (channel_id, user_id, role, joined_at) VALUES (?,?,?,?)",
+                    (cid, other_id, "member", time.time()),
+                )
+        # Auto-add 3 demo users so creator can test admin features
+        demo_users = [("Серёга", "№28"), ("Михалыч", "№5"), ("Витёк", "№15")]
+        for callsign, route in demo_users:
+            uid = str(uuid.uuid4())
+            conn.execute(
+                "INSERT INTO users (id, callsign, route, public_key, created_at) VALUES (?,?,?,?,?)",
+                (uid, callsign, route, "demo-key", time.time()),
+            )
+            conn.execute(
+                "INSERT INTO members (channel_id, user_id, role, joined_at) VALUES (?,?,?,?)",
+                (cid, uid, "member", time.time()),
+            )
         row = conn.execute("SELECT * FROM channels WHERE id = ?", (cid,)).fetchone()
         return {"channel": _channel_json(conn, row, user["id"])}
 
@@ -591,7 +633,7 @@ def members(cid: int, user: sqlite3.Row = Depends(current_user)):
             if not m:
                 raise HTTPException(403, "not_a_member")
         rows = conn.execute(
-            "SELECT m.user_id, m.role, m.muted, u.callsign, u.route "
+            "SELECT m.user_id, m.role, m.muted, m.deafened, u.callsign, u.route "
             "FROM members m JOIN users u ON u.id = m.user_id WHERE m.channel_id = ?",
             (cid,),
         ).fetchall()
@@ -605,6 +647,7 @@ def members(cid: int, user: sqlite3.Row = Depends(current_user)):
                     "role": r["role"],
                     "online": r["user_id"] in online,
                     "muted": bool(r["muted"]),
+                    "deafened": bool(r["deafened"]),
                 }
                 for r in rows
             ]
@@ -729,6 +772,22 @@ def mute(cid: int, uid: str, body: MuteBody, user: sqlite3.Row = Depends(current
         )
     _notify_user_sync(uid, {
         "type": "muted" if body.muted else "unmuted", "channel_id": cid,
+    })
+    return {"ok": True}
+
+
+@app.post("/channels/{cid}/members/{uid}/deafen")
+def deafen(cid: int, uid: str, body: DeafenBody, user: sqlite3.Row = Depends(current_user)):
+    with get_db() as conn:
+        if not _is_admin(conn, cid, user["id"]):
+            raise HTTPException(403, "not_admin")
+        _guard_target(conn, cid, uid, user["id"])
+        conn.execute(
+            "UPDATE members SET deafened = ? WHERE channel_id = ? AND user_id = ?",
+            (1 if body.deafened else 0, cid, uid),
+        )
+    _notify_user_sync(uid, {
+        "type": "deafened" if body.deafened else "undeafened", "channel_id": cid,
     })
     return {"ok": True}
 

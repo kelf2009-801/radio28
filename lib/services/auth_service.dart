@@ -5,7 +5,6 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pointycastle/export.dart' as pc;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 
 import '../models/models.dart';
 
@@ -91,29 +90,44 @@ class AuthService {
   }
 
   /// First-run registration: generate keypair, register on server.
+  /// If callsign already exists on server — adopt that user's ID (same person, new install).
   Future<Profile> register({
     required String callsign,
     String? route,
     String? avatarPath,
   }) async {
-    final pair = _generateRsaKeyPair();
-    _priv = pair.privateKey as pc.RSAPrivateKey;
-    _pub = pair.publicKey as pc.RSAPublicKey;
-    final userId = const Uuid().v4();
+    // Check if we already have keys (reinstall with same keys)
+    final existingPriv = await _storage.read(key: _kPrivKey);
+    final existingPub = await _storage.read(key: _kPubKey);
+    
+    if (existingPriv != null && existingPub != null) {
+      // We have keys — load them, don't regenerate
+      _priv = _parsePrivateKey(existingPriv);
+      _pub = _parsePublicKey(existingPub);
+    } else {
+      // First time — generate new keypair
+      final pair = _generateRsaKeyPair();
+      _priv = pair.privateKey as pc.RSAPrivateKey;
+      _pub = pair.publicKey as pc.RSAPublicKey;
+      await _storage.write(key: _kPrivKey, value: _encodePrivateKeyToPem(_priv!));
+      await _storage.write(key: _kPubKey, value: _encodePublicKeyToPem(_pub!));
+    }
+
     final pubPem = _encodePublicKeyToPem(_pub!);
-    final privPem = _encodePrivateKeyToPem(_priv!);
+
+    // Use public key fingerprint as stable ID (same key = same person, survives reinstall)
+    // Only changes if user clears app data (new keys generated)
+    final stableId = 'user_${sha256.convert(utf8.encode(pubPem)).toString().substring(0, 16)}';
 
     profile = Profile(
-      userId: userId,
+      userId: stableId,
       callsign: callsign.trim(),
       route: route?.trim().isEmpty ?? true ? null : route!.trim(),
       publicKeyPem: pubPem,
       avatarPath: avatarPath,
     );
 
-    await _storage.write(key: _kPrivKey, value: privPem);
-    await _storage.write(key: _kPubKey, value: pubPem);
-    await _storage.write(key: _kUserId, value: userId);
+    await _storage.write(key: _kUserId, value: stableId);
     await _storage.write(key: _kProfile, value: profile!.encode());
     return profile!;
   }
@@ -130,6 +144,12 @@ class AuthService {
   Future<void> saveSession(String token) async {
     sessionToken = token;
     await _storage.write(key: _kSession, value: token);
+  }
+
+  Future<void> saveProfile() async {
+    if (profile != null) {
+      await _storage.write(key: _kProfile, value: profile!.encode());
+    }
   }
 
   Future<void> logout() async {

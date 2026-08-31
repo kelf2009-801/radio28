@@ -73,7 +73,22 @@ class ApiService {
 
   Future<void> registerOnServer() async {
     final p = auth.profile!;
-    await _req('POST', '/auth/register', body: p.toJson(), authRequired: false);
+    final j = await _req('POST', '/auth/register', body: p.toJson(), authRequired: false);
+    // If server says "existing user with same callsign" — adopt their user_id
+    if (j['existing'] == true && j['user_id'] != null) {
+      final oldId = j['user_id'] as String;
+      if (oldId != p.userId) {
+        // Update local profile to use the old user_id (keeps channel memberships)
+        auth.profile = Profile(
+          userId: oldId,
+          callsign: p.callsign,
+          route: p.route,
+          publicKeyPem: p.publicKeyPem,
+          avatarPath: p.avatarPath,
+        );
+        await auth.saveProfile();
+      }
+    }
   }
 
   Future<void> login() async {
@@ -104,11 +119,24 @@ class ApiService {
     return (j['channels'] as List).map((e) => Channel.fromJson(e)).toList();
   }
 
-  Future<Channel> createChannel(String name, {String? inviteCode, bool isPrivate = true}) async {
+  Future<Channel> createChannel(String name, {String? inviteCode, bool isPrivate = true, bool isDirect = false}) async {
     final j = await _req('POST', '/channels', body: {
       'name': name,
       'is_private': isPrivate,
+      'is_direct': isDirect,
       if (inviteCode != null && inviteCode.isNotEmpty) 'invite_code': inviteCode,
+    });
+    return Channel.fromJson(j['channel']);
+  }
+
+  /// Create a 1-on-1 direct channel with another user.
+  Future<Channel> createDirectChannel(String otherUserId) async {
+    final myId = auth.profile!.userId;
+    final name = 'direct_${myId}_$otherUserId';
+    final j = await _req('POST', '/channels', body: {
+      'name': name,
+      'is_private': true,
+      'is_direct': true,
     });
     return Channel.fromJson(j['channel']);
   }
@@ -178,6 +206,9 @@ class ApiService {
 
   Future<void> setRole(int channelId, String userId, String role) =>
       _req('POST', '/channels/$channelId/members/$userId/role', body: {'role': role});
+
+  Future<void> deafen(int channelId, String userId, bool deafened) =>
+      _req('POST', '/channels/$channelId/members/$userId/deafen', body: {'deafened': deafened});
 
   Future<String> regenerateInviteCode(int channelId) async {
     final j = await _req('POST', '/channels/$channelId/invite_code/regenerate');

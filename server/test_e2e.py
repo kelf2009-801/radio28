@@ -105,12 +105,15 @@ def req(method, path, body=None, token=None):
 
 def register_and_login(name, route=None):
     n, e, d, p, q = gen_rsa()
-    uid = str(uuid.uuid4())
     pub = pem_pub(n, e)
+    uid = 'user_' + hashlib.sha256(pub.encode()).hexdigest()[:16]
     s, j = req("POST", "/auth/register", {
         "user_id": uid, "callsign": name, "route": route, "public_key": pub,
     })
     assert s == 200, (s, j)
+    # If server says existing user — use their ID
+    if j.get("existing") and j.get("user_id"):
+        uid = j["user_id"]
     s, ch = req("GET", f"/auth/challenge?user_id={uid}")
     assert s == 200, (s, ch)
     sig = sign(n, d, ch["nonce"].encode())
@@ -119,7 +122,6 @@ def register_and_login(name, route=None):
     })
     assert s == 200, (s, j)
     return {"user_id": uid, "callsign": name, "token": j["session"]}
-
 def main():
     print(f"== radio28 backend e2e against {BASE} ==")
 

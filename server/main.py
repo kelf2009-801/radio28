@@ -377,13 +377,13 @@ def search_channels(q: Optional[str] = Query(None), user: sqlite3.Row = Depends(
     with get_db() as conn:
         if q and len(q) >= 2:
             rows = conn.execute(
-                "SELECT * FROM channels WHERE name LIKE ? ORDER BY created_at DESC LIMIT 30",
+                "SELECT * FROM channels WHERE name LIKE ? AND name NOT LIKE 'direct_%' ORDER BY created_at DESC LIMIT 30",
                 (f"%{q}%",),
             ).fetchall()
         else:
-            # No query = list all channels
+            # No query = list all channels (exclude direct)
             rows = conn.execute(
-                "SELECT * FROM channels ORDER BY created_at DESC LIMIT 50",
+                "SELECT * FROM channels WHERE name NOT LIKE 'direct_%' ORDER BY created_at DESC LIMIT 50",
             ).fetchall()
         return {"channels": [_channel_json(conn, r, user["id"]) for r in rows]}
 

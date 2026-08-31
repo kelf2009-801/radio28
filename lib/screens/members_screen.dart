@@ -113,13 +113,6 @@ class _MembersScreenState extends State<MembersScreen> {
               child: Text(m.callsign, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             ),
             ListTile(
-              leading: const Icon(Icons.record_voice_over, color: AppTheme.accent),
-              title: const Text('Говорить только ему'),
-              subtitle: const Text('Личный вызов (в разработке)', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
-              onTap: () => Navigator.pop(ctx, 'private_call'),
-            ),
-            const Divider(height: 1),
-            ListTile(
               leading: Icon(m.muted ? Icons.mic : Icons.mic_off, color: AppTheme.warning),
               title: Text(m.muted ? 'Снять мьют (включить микрофон)' : 'Замьютить (выключить микрофон)'),
               onTap: () => Navigator.pop(ctx, 'mute'),
@@ -158,31 +151,25 @@ class _MembersScreenState extends State<MembersScreen> {
       if (act == 'kick') await widget.api.kick(widget.channel.id, m.userId);
       if (act == 'ban') await widget.api.ban(widget.channel.id, m.userId);
       if (act == 'toggle_admin') await widget.api.setRole(widget.channel.id, m.userId, m.role == 'admin' ? 'member' : 'admin');
-      if (act == 'private_call') {
-        // Create direct channel and switch to it
-        try {
-          final direct = await widget.api.createDirectChannel(m.userId) as Channel;
-          if (mounted) {
-            Navigator.pop(context); // close members screen
-            // Switch to the direct channel
-            if (widget.onJoined != null) {
-              widget.onJoined!(direct);
-            }
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Ошибка: $e')),
-            );
-          }
-        }
-      }
       _load();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
       }
     }
+  }
+
+  String? _selectedMemberId;
+
+  void _onMemberTap(Member m) {
+    // Toggle selection for direct talk
+    setState(() {
+      if (_selectedMemberId == m.userId) {
+        _selectedMemberId = null; // deselect
+      } else {
+        _selectedMemberId = m.userId; // select
+      }
+    });
   }
 
   @override
@@ -199,8 +186,13 @@ class _MembersScreenState extends State<MembersScreen> {
           final m = _members[i];
           final speaking = _speaking.contains(m.userId);
           return Card(
-            color: speaking ? AppTheme.accentDim : AppTheme.card,
+            color: _selectedMemberId == m.userId
+                ? AppTheme.accent.withOpacity(0.3)
+                : speaking
+                    ? AppTheme.accentDim
+                    : AppTheme.card,
             child: ListTile(
+              onTap: () => _onMemberTap(m),
               onLongPress: () => _actions(m),
               leading: _MemberAvatar(member: m, speaking: speaking),
               title: Row(

@@ -13,12 +13,14 @@ class MembersScreen extends StatefulWidget {
     required this.api,
     required this.myUserId,
     required this.livekit,
+    this.embedded = false,
   });
 
   final Channel channel;
   final dynamic api;
   final String myUserId;
   final dynamic livekit;
+  final bool embedded; // true = shown as bottom-nav tab (no back button)
 
   @override
   State<MembersScreen> createState() => _MembersScreenState();
@@ -103,6 +105,97 @@ class _MembersScreenState extends State<MembersScreen> {
   @override
   Widget build(BuildContext context) {
     final online = _members.where((m) => m.online).length;
+    final body = RefreshIndicator(
+      color: AppTheme.accent,
+      onRefresh: _load,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(12),
+        itemCount: _members.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 4),
+        itemBuilder: (_, i) {
+          final m = _members[i];
+          final speaking = _speaking.contains(m.userId);
+          return Card(
+            color: speaking ? AppTheme.accentDim : AppTheme.card,
+            child: ListTile(
+              onLongPress: () => _actions(m),
+              leading: CircleAvatar(
+                backgroundColor: speaking
+                    ? AppTheme.accent
+                    : m.online
+                        ? AppTheme.card
+                        : AppTheme.border,
+                child: Text(
+                  m.initial,
+                  style: TextStyle(
+                    color: speaking ? Colors.black : AppTheme.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              title: Row(
+                children: [
+                  Flexible(
+                    child: Text(m.callsign, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                  if (m.role == 'creator' || m.role == 'admin') ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentDim,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        m.role == 'creator' ? 'СОЗДАТЕЛЬ' : 'АДМИН',
+                        style: const TextStyle(fontSize: 9, color: AppTheme.accent, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                  if (m.muted) ...[
+                    const SizedBox(width: 6),
+                    const Icon(Icons.mic_off, size: 14, color: AppTheme.danger),
+                  ],
+                ],
+              ),
+              subtitle: Text(
+                [
+                  if (m.route != null) m.route!,
+                  m.online ? 'онлайн' : 'офлайн',
+                  if (speaking) '· говорит',
+                ].join(' · '),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: speaking ? AppTheme.accent : AppTheme.textSecondary,
+                ),
+              ),
+              trailing: speaking
+                  ? const Icon(Icons.graphic_eq, color: AppTheme.accent)
+                  : Icon(Icons.circle, size: 8, color: m.online ? AppTheme.accent : AppTheme.textMuted),
+            ),
+          );
+        },
+      ),
+    );
+
+    if (widget.embedded) {
+      return Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: Text(widget.channel.name),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(28),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text('$online онлайн · ${_members.length} всего',
+                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+            ),
+          ),
+        ),
+        body: body,
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.channel.name),
@@ -115,78 +208,7 @@ class _MembersScreenState extends State<MembersScreen> {
           ),
         ),
       ),
-      body: RefreshIndicator(
-        color: AppTheme.accent,
-        onRefresh: _load,
-        child: ListView.separated(
-          padding: const EdgeInsets.all(12),
-          itemCount: _members.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 4),
-          itemBuilder: (_, i) {
-            final m = _members[i];
-            final speaking = _speaking.contains(m.userId);
-            return Card(
-              color: speaking ? AppTheme.accentDim : AppTheme.card,
-              child: ListTile(
-                onLongPress: () => _actions(m),
-                leading: CircleAvatar(
-                  backgroundColor: speaking
-                      ? AppTheme.accent
-                      : m.online
-                          ? AppTheme.card
-                          : AppTheme.border,
-                  child: Text(
-                    m.initial,
-                    style: TextStyle(
-                      color: speaking ? Colors.black : AppTheme.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                title: Row(
-                  children: [
-                    Flexible(
-                      child: Text(m.callsign, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    ),
-                    if (m.role == 'creator' || m.role == 'admin') ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentDim,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          m.role == 'creator' ? 'СОЗДАТЕЛЬ' : 'АДМИН',
-                          style: const TextStyle(fontSize: 9, color: AppTheme.accent, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
-                    if (m.muted) ...[
-                      const SizedBox(width: 6),
-                      const Icon(Icons.mic_off, size: 14, color: AppTheme.danger),
-                    ],
-                  ],
-                ),
-                subtitle: Text(
-                  [
-                    if (m.route != null) m.route!,
-                    m.online ? 'онлайн' : 'офлайн',
-                    if (speaking) '· говорит',
-                  ].join(' · '),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: speaking ? AppTheme.accent : AppTheme.textSecondary,
-                  ),
-                ),
-                trailing: speaking
-                    ? const Icon(Icons.graphic_eq, color: AppTheme.accent)
-                    : Icon(Icons.circle, size: 8, color: m.online ? AppTheme.accent : AppTheme.textMuted),
-              ),
-            );
-          },
-        ),
-      ),
+      body: body,
     );
   }
 }

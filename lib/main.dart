@@ -231,6 +231,13 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
           ),
         ),
       ),
+      MembersScreen(
+        channel: ch,
+        api: api,
+        myUserId: auth.profile!.userId,
+        livekit: livekit,
+        embedded: true,
+      ),
       HistoryScreen(channel: ch, api: api),
       SettingsScreen(
         auth: auth,
@@ -253,6 +260,7 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
         onTap: (i) => setState(() => _navIndex = i),
         items: [
           const BottomNavigationBarItem(icon: Icon(Icons.radio), label: 'Рация'),
+          const BottomNavigationBarItem(icon: Icon(Icons.people_alt_outlined), label: 'Онлайн'),
           const BottomNavigationBarItem(icon: Icon(Icons.history), label: 'История'),
           const BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Настройки'),
         ],

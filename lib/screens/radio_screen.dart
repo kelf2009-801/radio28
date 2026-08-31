@@ -108,25 +108,36 @@ class _RadioScreenState extends State<RadioScreen> {
   Future<void> _pttDown() async {
     if (_pressed) return;
     setState(() => _pressed = true);
-    // Vibration + beep (читаем настройки из SharedPreferences)
+    // Vibration + beep — always try, settings are secondary
     try {
       final prefs = await SharedPreferences.getInstance();
       final vib = prefs.getBool('vibration_on') ?? true;
       final snd = prefs.getBool('ptt_sound') ?? true;
       if (vib) {
-        HapticFeedback.mediumImpact();
-        if (await Vibration.hasVibrator() ?? false) Vibration.vibrate(duration: 40);
+        HapticFeedback.heavyImpact();
+        if (await Vibration.hasVibrator() ?? false) {
+          Vibration.vibrate(duration: 60, amplitude: 128);
+        }
       }
       if (snd) {
-        SystemSound.play(SystemSoundType.click);
+        await SystemSound.play(SystemSoundType.alert);
       }
-    } catch (_) {}
+    } catch (_) {
+      // PTT feedback failure is non-fatal — mic still toggles
+    }
     await widget.livekit.startTalking();
   }
 
   Future<void> _pttUp() async {
     if (!_pressed) return;
     setState(() => _pressed = false);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final snd = prefs.getBool('ptt_sound') ?? true;
+      if (snd) {
+        await SystemSound.play(SystemSoundType.click);
+      }
+    } catch (_) {}
     await widget.livekit.stopTalking();
   }
 

@@ -66,8 +66,10 @@ class _HomeScreenState extends State<HomeScreen> {
           _favorites = favs;
           _loading = false;
         });
+        print('Loaded: all=${all.length}, mine=${mine.length}, favs=${favs.length}');
       }
-    } catch (_) {
+    } catch (e) {
+      print('Load error: $e');
       if (mounted) setState(() => _loading = false);
     }
   }

@@ -1,7 +1,8 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show HapticFeedback, SystemSound, SystemSoundType;
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:livekit_client/livekit_client.dart' as lk show ConnectionState;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,6 +46,7 @@ class _RadioScreenState extends State<RadioScreen> {
   DateTime? _lastSpokeAt;
   double _volume = 0.8;
   lk.ConnectionState _conn = lk.ConnectionState.disconnected;
+  final AudioPlayer _beep = AudioPlayer();
 
   StreamSubscription? _subSpeak;
   StreamSubscription? _subParts;
@@ -60,6 +62,7 @@ class _RadioScreenState extends State<RadioScreen> {
   @override
   void dispose() {
     WakelockPlus.disable();
+    _beep.dispose();
     _subSpeak?.cancel();
     _subParts?.cancel();
     _subConn?.cancel();
@@ -121,9 +124,7 @@ class _RadioScreenState extends State<RadioScreen> {
         }
       }
       if (snd) {
-        // System alert sound + haptic pattern for feedback
-        await SystemSound.play(SystemSoundType.alert);
-        HapticFeedback.vibrate();
+        await _beep.play(AssetSource('sounds/ptt_beep.wav'), volume: 0.7);
       }
     } catch (_) {
       // PTT feedback failure is non-fatal — mic still toggles
@@ -138,7 +139,7 @@ class _RadioScreenState extends State<RadioScreen> {
       final prefs = await SharedPreferences.getInstance();
       final snd = prefs.getBool('ptt_sound') ?? true;
       if (snd) {
-        await SystemSound.play(SystemSoundType.click);
+        await _beep.play(AssetSource('sounds/ptt_beep.wav'), volume: 0.5);
       }
     } catch (_) {}
     await widget.livekit.stopTalking();

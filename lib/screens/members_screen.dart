@@ -107,9 +107,10 @@ class _MembersScreenState extends State<MembersScreen> {
       backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(m.callsign, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
@@ -130,20 +131,21 @@ class _MembersScreenState extends State<MembersScreen> {
                 title: Text(m.role == 'admin' ? 'Снять админа' : 'Назначить админом'),
                 onTap: () => Navigator.pop(ctx, 'toggle_admin'),
               ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.exit_to_app, color: AppTheme.danger),
-              title: const Text('Кикнуть из канала'),
-              onTap: () => Navigator.pop(ctx, 'kick'),
-            ),
-            if (widget.channel.isCreator)
+              const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.block, color: AppTheme.danger),
-                title: const Text('Забанить (не сможет вернуться)'),
-                onTap: () => Navigator.pop(ctx, 'ban'),
+                leading: const Icon(Icons.exit_to_app, color: AppTheme.danger),
+                title: const Text('Кикнуть из канала'),
+                onTap: () => Navigator.pop(ctx, 'kick'),
               ),
-            const SizedBox(height: 8),
-          ],
+              if (widget.channel.isCreator)
+                ListTile(
+                  leading: const Icon(Icons.block, color: AppTheme.danger),
+                  title: const Text('Забанить (не сможет вернуться)'),
+                  onTap: () => Navigator.pop(ctx, 'ban'),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );

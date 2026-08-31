@@ -220,24 +220,51 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildChannelList(List<Channel> channels, String title) {
     if (channels.isEmpty && !_loading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.radio, size: 48, color: AppTheme.textMuted),
-            const SizedBox(height: 16),
-            Text(
-              'Нет каналов',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const SizedBox(height: 60),
+          Icon(Icons.radio, size: 48, color: AppTheme.textMuted),
+          const SizedBox(height: 16),
+          Text(
+            'Нет каналов',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title == 'Мои каналы' ? 'Ты ещё не создал канал' : 'Создай первый канал',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 32),
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final created = await Navigator.push<Channel>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CreateChannelScreen(
+                      api: widget.api,
+                      onCreated: (c) => Navigator.pop(context, c),
+                    ),
+                  ),
+                );
+                if (created != null) {
+                  _loadAll();
+                  widget.onJoined(created);
+                }
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Создать канал'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accent,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              title == 'Мои каналы' ? 'Ты ещё не создал канал' : 'Создай первый канал',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
     return ListView(

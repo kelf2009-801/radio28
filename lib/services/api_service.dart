@@ -120,6 +120,11 @@ class ApiService {
     return j['status'] as String;
   }
 
+  /// Leave current channel (client-side; server keeps history).
+  Future<void> leaveChannel(int channelId) async {
+    await _req('POST', '/channels/$channelId/leave');
+  }
+
   Future<Map<String, dynamic>> joinStatus(int channelId) async {
     return _req('GET', '/channels/$channelId/join_status');
   }

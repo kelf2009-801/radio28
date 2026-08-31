@@ -48,12 +48,11 @@ CREATE TABLE IF NOT EXISTS users (
 );
 CREATE TABLE IF NOT EXISTS channels (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL COLLATE NOCASE,
+    name TEXT NOT NULL COLLATE NOCASE UNIQUE,
     is_private INTEGER NOT NULL DEFAULT 1,
     invite_code TEXT,
     creator_id TEXT NOT NULL,
-    created_at REAL NOT NULL,
-    UNIQUE(name, creator_id)
+    created_at REAL NOT NULL
 );
 CREATE TABLE IF NOT EXISTS members (
     channel_id INTEGER NOT NULL,
@@ -371,6 +370,12 @@ def create_channel(body: ChannelBody, user: sqlite3.Row = Depends(current_user))
     if len(name) < 2:
         raise HTTPException(400, "name_too_short")
     with get_db() as conn:
+        # Channel names are globally unique (case-insensitive) — like real radio channels.
+        existing = conn.execute(
+            "SELECT 1 FROM channels WHERE LOWER(name) = LOWER(?)", (name,)
+        ).fetchone()
+        if existing:
+            raise HTTPException(409, "channel_name_taken")
         try:
             cur = conn.execute(
                 "INSERT INTO channels (name, is_private, invite_code, creator_id, created_at) "
@@ -378,7 +383,7 @@ def create_channel(body: ChannelBody, user: sqlite3.Row = Depends(current_user))
                 (name, 1 if body.is_private else 0, body.invite_code or None, user["id"], time.time()),
             )
         except sqlite3.IntegrityError:
-            raise HTTPException(409, "channel_exists")
+            raise HTTPException(409, "channel_name_taken")
         cid = cur.lastrowid
         conn.execute(
             "INSERT INTO members (channel_id, user_id, role, joined_at) VALUES (?,?,?,?)",
@@ -495,6 +500,21 @@ def join_status(cid: int, user: sqlite3.Row = Depends(current_user)):
         if r["status"] == "approved":
             return {"status": "none"}
         return {"status": r["status"], "reason": r["reason"]}
+
+
+@app.post("/channels/{cid}/leave")
+def leave_channel(cid: int, user: sqlite3.Row = Depends(current_user)):
+    with get_db() as conn:
+        m = conn.execute(
+            "SELECT role FROM members WHERE channel_id = ? AND user_id = ?",
+            (cid, user["id"]),
+        ).fetchone()
+        if not m:
+            return {"ok": True}
+        if m["role"] == "creator":
+            raise HTTPException(400, "creator_cant_leave")
+        conn.execute("DELETE FROM members WHERE channel_id = ? AND user_id = ?", (cid, user["id"]))
+    return {"ok": True}
 
 
 # ---------------- members / admin ----------------

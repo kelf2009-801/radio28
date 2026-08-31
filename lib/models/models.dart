@@ -6,14 +6,14 @@ class Profile {
   final String callsign;
   final String? route;
   final String publicKeyPem;
-  final int avatarColor; // index into palette
+  final String? avatarPath; // local file path (avatar photo picked from gallery)
 
   const Profile({
     required this.userId,
     required this.callsign,
     this.route,
     required this.publicKeyPem,
-    this.avatarColor = 0,
+    this.avatarPath,
   });
 
   Map<String, dynamic> toJson() => {
@@ -21,7 +21,7 @@ class Profile {
         'callsign': callsign,
         'route': route,
         'public_key': publicKeyPem,
-        'avatar_color': avatarColor,
+        'avatar_path': avatarPath,
       };
 
   factory Profile.fromJson(Map<String, dynamic> j) => Profile(
@@ -29,15 +29,15 @@ class Profile {
         callsign: j['callsign'] as String,
         route: j['route'] as String?,
         publicKeyPem: j['public_key'] as String? ?? '',
-        avatarColor: j['avatar_color'] as int? ?? 0,
+        avatarPath: j['avatar_path'] as String?,
       );
 
-  Profile copyWith({String? callsign, String? route, int? avatarColor}) => Profile(
+  Profile copyWith({String? callsign, String? route, String? avatarPath}) => Profile(
         userId: userId,
         callsign: callsign ?? this.callsign,
         route: route ?? this.route,
         publicKeyPem: publicKeyPem,
-        avatarColor: avatarColor ?? this.avatarColor,
+        avatarPath: avatarPath ?? this.avatarPath,
       );
 
   String encode() => jsonEncode(toJson());

@@ -124,8 +124,8 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _onOnboarded(String callsign, String route, int avatarColor) async {
-    await auth.register(callsign: callsign, route: route.isEmpty ? null : route, avatarColor: avatarColor);
+  Future<void> _onOnboarded(String callsign, String route, String? avatarPath) async {
+    await auth.register(callsign: callsign, route: route.isEmpty ? null : route, avatarPath: avatarPath);
     await api.registerOnServer();
     await api.login();
     await ws.connect();

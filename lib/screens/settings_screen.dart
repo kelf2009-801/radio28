@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/theme.dart';
 import '../models/models.dart';
@@ -83,10 +86,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: _editCallsign,
             ),
             ListTile(
-              leading: const Icon(Icons.palette_outlined, color: AppTheme.textSecondary),
-              title: const Text('Цвет аватарки'),
+              leading: const Icon(Icons.photo_camera_outlined, color: AppTheme.textSecondary),
+              title: const Text('Фото профиля'),
+              subtitle: const Text('Выбрать из галереи',
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
               trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
-              onTap: _pickAvatarColor,
+              onTap: _pickAvatarPhoto,
             ),
             ListTile(
               leading: const Icon(Icons.route_outlined, color: AppTheme.textSecondary),
@@ -261,16 +266,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _avatarWidget(Profile? p) {
-    const colors = [
-      Color(0xFF00FF8C), Color(0xFF4D9FFF), Color(0xFFFFB84D),
-      Color(0xFFFF6B9D), Color(0xFFB98CFF), Color(0xFFFF5C5C),
-    ];
-    final color = colors[(p?.avatarColor ?? 0) % colors.length];
+    if (p?.avatarPath != null && p!.avatarPath!.isNotEmpty) {
+      return CircleAvatar(
+        radius: 20,
+        backgroundImage: FileImage(File(p.avatarPath!)),
+        backgroundColor: AppTheme.card,
+      );
+    }
     return CircleAvatar(
-      backgroundColor: color.withOpacity(0.2),
+      backgroundColor: AppTheme.accentDim,
       child: Text(
         (p?.callsign.isNotEmpty ?? false) ? p!.callsign[0].toUpperCase() : '?',
-        style: TextStyle(color: color, fontWeight: FontWeight.w700),
+        style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -349,44 +356,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _pickAvatarColor() async {
-    const colors = [
-      Color(0xFF00FF8C), Color(0xFF4D9FFF), Color(0xFFFFB84D),
-      Color(0xFFFF6B9D), Color(0xFFB98CFF), Color(0xFFFF5C5C),
-    ];
-    final p = widget.auth.profile as Profile?;
-    final result = await showDialog<int>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Цвет аватарки'),
-        content: Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: List.generate(colors.length, (i) {
-            final sel = i == (p?.avatarColor ?? 0);
-            return GestureDetector(
-              onTap: () => Navigator.pop(ctx, i),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: colors[i],
-                  shape: BoxShape.circle,
-                  border: sel ? Border.all(color: Colors.white, width: 3) : null,
-                ),
-                child: sel ? const Icon(Icons.check, color: Colors.black, size: 20) : null,
-              ),
-            );
-          }),
-        ),
-      ),
-    );
-    if (result == null) return;
-    final a = widget.auth;
-    await a.updateProfile(avatarColor: result);
+  Future<void> _pickAvatarPhoto() async {
+    final picker = ImagePicker();
     try {
-      await widget.api.registerOnServer();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
+      if (picked == null) return;
+      final a = widget.auth;
+      await a.updateProfile(avatarPath: picked.path);
+      try {
+        await widget.api.registerOnServer();
+      } catch (_) {}
+      if (mounted) setState(() {});
     } catch (_) {}
-    if (mounted) setState(() {});
   }
 }

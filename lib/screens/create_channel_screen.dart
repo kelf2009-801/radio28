@@ -46,11 +46,10 @@ class _CreateChannelScreenState extends State<CreateChannelScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.toString().contains('channel_exists')
-              ? 'Канал с таким именем у тебя уже есть'
-              : 'Ошибка: $e'),
-        ));
+        final msg = e.toString().contains('channel_name_taken')
+            ? 'Канал с таким названием уже занят. Придумай другое.'
+            : 'Ошибка: $e';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       }
     }
   }

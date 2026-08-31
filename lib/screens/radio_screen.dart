@@ -1,9 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:flutter/services.dart' show HapticFeedback, SystemSound, SystemSoundType;
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:livekit_client/livekit_client.dart' as lk show ConnectionState;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -107,9 +108,18 @@ class _RadioScreenState extends State<RadioScreen> {
   Future<void> _pttDown() async {
     if (_pressed) return;
     setState(() => _pressed = true);
-    HapticFeedback.mediumImpact();
+    // Vibration + beep (читаем настройки из SharedPreferences)
     try {
-      if (await Vibration.hasVibrator() ?? false) Vibration.vibrate(duration: 30);
+      final prefs = await SharedPreferences.getInstance();
+      final vib = prefs.getBool('vibration_on') ?? true;
+      final snd = prefs.getBool('ptt_sound') ?? true;
+      if (vib) {
+        HapticFeedback.mediumImpact();
+        if (await Vibration.hasVibrator() ?? false) Vibration.vibrate(duration: 40);
+      }
+      if (snd) {
+        SystemSound.play(SystemSoundType.click);
+      }
     } catch (_) {}
     await widget.livekit.startTalking();
   }

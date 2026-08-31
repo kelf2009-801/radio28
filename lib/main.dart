@@ -235,6 +235,12 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
         channel: ch,
         api: api,
         onLeaveChannel: _leaveChannel,
+        onUpdateProfile: (route) async {
+          await auth.updateRoute(route);
+          try {
+            await api.registerOnServer();
+          } catch (_) {}
+        },
       ),
     ];
 

@@ -32,7 +32,7 @@ class AuthService {
 
   static const defaultServer = String.fromEnvironment(
     'RADIO_SERVER',
-    defaultValue: 'http://192.168.0.191:8000', // домашний комп Андрея (LAN); на VPS заменю при сборке
+    defaultValue: 'https://mounted-complimentary-dam-exotic.trycloudflare.com',
   );
 
   Future<String> get serverUrl async {
@@ -62,6 +62,33 @@ class AuthService {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Load UI prefs (noise suppression, ptt sound, vibration) from SharedPreferences.
+  Future<Map<String, dynamic>> prefs() async {
+    final p = await SharedPreferences.getInstance();
+    return {
+      'noise_suppression': p.getBool('noise_suppression'),
+      'ptt_sound': p.getBool('ptt_sound'),
+      'vibration_on': p.getBool('vibration_on'),
+    };
+  }
+
+  Future<void> savePref(String key, bool value) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(key, value);
+  }
+
+  /// Update profile route (settings screen) — re-register on server with same key.
+  Future<void> updateRoute(String? route) async {
+    if (profile == null) return;
+    profile = Profile(
+      userId: profile!.userId,
+      callsign: profile!.callsign,
+      route: route,
+      publicKeyPem: profile!.publicKeyPem,
+    );
+    await _storage.write(key: _kProfile, value: profile!.encode());
   }
 
   /// First-run registration: generate keypair, register on server.

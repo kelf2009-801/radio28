@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../core/theme.dart';
 import '../models/models.dart';
+import 'create_channel_screen.dart';
 
 /// Profile / channel / sound settings + server URL + logout.
 class SettingsScreen extends StatefulWidget {
@@ -12,12 +13,14 @@ class SettingsScreen extends StatefulWidget {
     required this.channel,
     required this.api,
     required this.onLeaveChannel,
+    required this.onUpdateProfile,
   });
 
   final dynamic auth; // AuthService
   final Channel? channel;
   final dynamic api;
   final VoidCallback onLeaveChannel;
+  final Future<void> Function(String? route) onUpdateProfile;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -32,12 +35,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadServer();
+    _load();
+  }
+  Future<void> _load() async {
+    final s = await widget.auth.serverUrl as String;
+    final prefs = await widget.auth.prefs();
+    if (mounted) {
+      setState(() {
+        _serverCtrl.text = s;
+        _noiseSuppression = prefs['noise_suppression'] as bool? ?? true;
+        _pttSound = prefs['ptt_sound'] as bool? ?? true;
+        _vibrationOn = prefs['vibration_on'] as bool? ?? true;
+      });
+    }
   }
 
-  Future<void> _loadServer() async {
-    final s = await widget.auth.serverUrl as String;
-    if (mounted) setState(() => _serverCtrl.text = s);
+  Future<void> _saveSetting(String key, bool value) async {
+    await widget.auth.savePref(key, value);
   }
 
   Future<void> _saveServer() async {
@@ -69,8 +83,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               title: Text(p?.callsign ?? '—', style: const TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: Text(p?.route ?? 'без маршрута',
+              subtitle: const Text('Позывной (не меняется)',
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.route_outlined, color: AppTheme.textSecondary),
+              title: const Text('Маршрут'),
+              subtitle: Text(p?.route ?? 'не указан',
                   style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+              trailing: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.textMuted),
+              onTap: _editRoute,
             ),
           ]),
           if (ch != null) ...[
@@ -91,6 +113,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: _regenCode,
                 ),
               ListTile(
+                leading: const Icon(Icons.add_circle_outline, color: AppTheme.accent),
+                title: const Text('Создать ещё канал'),
+                subtitle: const Text('Открытый или приватный',
+                    style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final created = await Navigator.push<Channel>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CreateChannelScreen(
+                        api: widget.api,
+                        onCreated: (c) => Navigator.pop(context, c),
+                      ),
+                    ),
+                  );
+                  if (created != null && mounted) {
+                    messenger.showSnackBar(
+                      SnackBar(content: Text('Канал «${created.name}» создан')),
+                    );
+                  }
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.logout, color: AppTheme.danger),
                 title: const Text('Выйти из канала', style: TextStyle(color: AppTheme.danger)),
                 onTap: widget.onLeaveChannel,
@@ -100,7 +145,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _group('Звук', [
             SwitchListTile(
               value: _noiseSuppression,
-              onChanged: (v) => setState(() => _noiseSuppression = v),
+              onChanged: (v) {
+                setState(() => _noiseSuppression = v);
+                _saveSetting('noise_suppression', v);
+              },
               title: const Text('Шумоподавление'),
               subtitle: const Text('Убирает фоновый шум',
                   style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
@@ -108,13 +156,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             SwitchListTile(
               value: _pttSound,
-              onChanged: (v) => setState(() => _pttSound = v),
+              onChanged: (v) {
+                setState(() => _pttSound = v);
+                _saveSetting('ptt_sound', v);
+              },
               title: const Text('Звук нажатия PTT'),
               activeColor: AppTheme.accent,
             ),
             SwitchListTile(
               value: _vibrationOn,
-              onChanged: (v) => setState(() => _vibrationOn = v),
+              onChanged: (v) {
+                setState(() => _vibrationOn = v);
+                _saveSetting('vibration_on', v);
+              },
               title: const Text('Вибрация при нажатии'),
               activeColor: AppTheme.accent,
             ),
@@ -220,5 +274,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _editRoute() async {
+    final p = widget.auth.profile as Profile?;
+    final ctrl = TextEditingController(text: p?.route ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Маршрут'),
+        content: TextField(
+          controller: ctrl,
+          maxLength: 12,
+          decoration: const InputDecoration(hintText: 'Например, №28', counterText: ''),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('Сохранить', style: TextStyle(color: AppTheme.accent)),
+          ),
+        ],
+      ),
+    );
+    if (result == null) return;
+    await widget.onUpdateProfile(result.isEmpty ? null : result);
+    if (mounted) setState(() {});
   }
 }

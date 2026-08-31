@@ -271,19 +271,8 @@ def register(body: RegisterBody):
                 (body.user_id, body.callsign, body.route, body.public_key, time.time()),
             )
         # The very first account on a fresh server owns the default private channel.
-        if is_first_user:
-            seed_name = os.environ.get("SEED_CHANNEL_NAME", "Сызрань-28")
-            ch = conn.execute("SELECT id FROM channels WHERE name = ?", (seed_name,)).fetchone()
-            if not ch:
-                cur = conn.execute(
-                    "INSERT INTO channels (name, is_private, invite_code, creator_id, created_at) "
-                    "VALUES (?,?,?,?,?)",
-                    (seed_name, 1, None, body.user_id, time.time()),
-                )
-                conn.execute(
-                    "INSERT INTO members (channel_id, user_id, role, joined_at) VALUES (?,?,?,?)",
-                    (cur.lastrowid, body.user_id, "creator", time.time()),
-                )
+        # REMOVED: user creates channels manually via the app UI.
+        _ = is_first_user
     return {"ok": True, "first_user": is_first_user}
 
 

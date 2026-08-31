@@ -88,10 +88,39 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
 
   Future<void> _join(Channel ch) async {
     String? code;
+
     if (ch.hasInviteCode) {
       code = await _askCode(ch);
       if (code == null) return; // cancelled
+    } else if (ch.isPrivate) {
+      // Private channel without code -> confirm join request
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(ch.name, style: const TextStyle(fontSize: 16)),
+          content: const Text(
+            'Это приватный канал. Админ получит твой запрос и подтвердит вход.',
+            style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Отмена'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accent,
+                foregroundColor: Colors.black,
+              ),
+              child: const Text('Отправить запрос'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
     }
+
     setState(() => _loading = true);
     try {
       final status = await widget.api.joinChannel(ch.id, inviteCode: code) as String;
@@ -104,7 +133,11 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = e.toString().contains('wrong_invite_code') ? 'Неверный код' : 'Ошибка входа';
+        _error = e.toString().contains('wrong_invite_code')
+            ? 'Неверный код'
+            : e.toString().contains('banned')
+                ? 'Ты заблокирован в этом канале'
+                : 'Ошибка входа';
       });
     }
   }

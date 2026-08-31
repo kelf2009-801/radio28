@@ -26,6 +26,31 @@ class MembersScreen extends StatefulWidget {
   State<MembersScreen> createState() => _MembersScreenState();
 }
 
+class _MemberAvatar extends StatelessWidget {
+  const _MemberAvatar({required this.member, required this.speaking});
+  final Member member;
+  final bool speaking;
+
+  @override
+  Widget build(BuildContext context) {
+    // If member has avatarPath (from profile) — show photo, else initial
+    // Note: Member model doesn't have avatarPath yet — using initial with color
+    final bgColor = speaking
+        ? AppTheme.accent
+        : member.online
+            ? AppTheme.accentDim
+            : AppTheme.border;
+    final textColor = speaking ? Colors.black : AppTheme.textPrimary;
+    return CircleAvatar(
+      backgroundColor: bgColor,
+      child: Text(
+        member.initial,
+        style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
 class _MembersScreenState extends State<MembersScreen> {
   List<Member> _members = [];
   Set<String> _speaking = {};
@@ -146,20 +171,7 @@ class _MembersScreenState extends State<MembersScreen> {
             color: speaking ? AppTheme.accentDim : AppTheme.card,
             child: ListTile(
               onLongPress: () => _actions(m),
-              leading: CircleAvatar(
-                backgroundColor: speaking
-                    ? AppTheme.accent
-                    : m.online
-                        ? AppTheme.card
-                        : AppTheme.border,
-                child: Text(
-                  m.initial,
-                  style: TextStyle(
-                    color: speaking ? Colors.black : AppTheme.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+              leading: _MemberAvatar(member: m, speaking: speaking),
               title: Row(
                 children: [
                   Flexible(

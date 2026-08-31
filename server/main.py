@@ -283,7 +283,7 @@ def register(body: RegisterBody):
             )
         # The very first account on a fresh server owns the default private channel.
         # REMOVED: user creates channels manually via the app UI.
-        _ = is_first_user
+        _ = is_first_user  # noqa: F841 — kept for future use
     return {"ok": True, "first_user": is_first_user}
 
 
@@ -353,12 +353,18 @@ def _channel_json(conn: sqlite3.Connection, row: sqlite3.Row, user_id: Optional[
 
 
 @app.get("/channels/search")
-def search_channels(q: str = Query(..., min_length=2), user: sqlite3.Row = Depends(current_user)):
+def search_channels(q: str = Query(default=""), user: sqlite3.Row = Depends(current_user)):
     with get_db() as conn:
-        rows = conn.execute(
-            "SELECT * FROM channels WHERE name LIKE ? ORDER BY created_at DESC LIMIT 30",
-            (f"%{q}%",),
-        ).fetchall()
+        if q and len(q) >= 2:
+            rows = conn.execute(
+                "SELECT * FROM channels WHERE name LIKE ? ORDER BY created_at DESC LIMIT 30",
+                (f"%{q}%",),
+            ).fetchall()
+        else:
+            # Empty query = list all channels
+            rows = conn.execute(
+                "SELECT * FROM channels ORDER BY created_at DESC LIMIT 50",
+            ).fetchall()
         return {"channels": [_channel_json(conn, r, user["id"]) for r in rows]}
 
 

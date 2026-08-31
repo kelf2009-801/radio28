@@ -53,8 +53,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadAll() async {
     try {
+      // Get all channels (search with empty string returns all)
       final all = await widget.api.searchChannels('') as List<Channel>;
+      // Get my channels (where I'm a member with any role)
       final mine = await widget.api.myChannels() as List<Channel>;
+      // Get favorites
       final favs = await widget.api.favorites() as List<Channel>;
       if (mounted) {
         setState(() {

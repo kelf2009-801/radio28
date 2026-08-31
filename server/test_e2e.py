@@ -131,14 +131,13 @@ def main():
     sergey = register_and_login("Серёга", "№28")
     print(f"[ok] registered: andrey={andrey['user_id'][:8]} sergey={sergey['user_id'][:8]}")
 
-    # 3) andrey is first user -> he already owns seeded "Сызрань-28" channel
-    from urllib.parse import quote
-    s, j = req("GET", "/channels/mine", token=andrey["token"])
-    assert s == 200 and len(j["channels"]) == 1, (s, j)
-    cid = j["channels"][0]["id"]
-    assert j["channels"][0]["role"] == "creator", j
-    assert j["channels"][0]["is_private"] is True, j
-    print(f"[ok] andrey auto-owns seeded channel #{cid} (creator, private)")
+    # 3) andrey creates channel manually (no auto-seed)
+    s, j = req("POST", "/channels", {"name": "Сызрань-28"}, token=andrey["token"])
+    assert s == 200, (s, j)
+    cid = j["channel"]["id"]
+    assert j["channel"]["role"] == "creator", j
+    assert j["channel"]["is_private"] is True, j
+    print(f"[ok] andrey created channel #{cid} (creator, private)")
 
     # 4) sergey search + join -> pending
     from urllib.parse import quote

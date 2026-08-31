@@ -15,6 +15,7 @@ class MembersScreen extends StatefulWidget {
     required this.livekit,
     this.embedded = false,
     this.onJoined,
+    this.onMemberSelected,
   });
 
   final Channel channel;
@@ -23,6 +24,7 @@ class MembersScreen extends StatefulWidget {
   final dynamic livekit;
   final bool embedded; // true = shown as bottom-nav tab (no back button)
   final void Function(Channel channel)? onJoined; // for direct call switch
+  final void Function(String? userId)? onMemberSelected; // notify radio screen of selection
 
   @override
   State<MembersScreen> createState() => _MembersScreenState();
@@ -170,7 +172,12 @@ class _MembersScreenState extends State<MembersScreen> {
         _selectedMemberId = m.userId; // select
       }
     });
+    // Notify radio screen of selection change
+    widget.onMemberSelected?.call(_selectedMemberId);
   }
+
+  /// Get the currently selected member ID for direct talk (null = talk to all)
+  String? get selectedMemberId => _selectedMemberId;
 
   @override
   Widget build(BuildContext context) {

@@ -45,6 +45,8 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
   bool _hasIdentity = false;
   Channel? _activeChannel;
   Channel? _pendingChannel;
+  String? _selectedMemberId; // null = talk to all, set = talk to selected member
+
   int _navIndex = 0;
 
   StreamSubscription? _wsSub;
@@ -217,6 +219,7 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
         livekit: livekit,
         profile: auth.profile!,
         onLeave: _leaveChannel,
+        selectedMemberId: _selectedMemberId,
         onOpenMembers: () => Navigator.push(
           context,
           MaterialPageRoute(
@@ -236,6 +239,7 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
         livekit: livekit,
         embedded: true,
         onJoined: _onJoined,
+        onMemberSelected: (userId) => setState(() => _selectedMemberId = userId),
       ),
       HistoryScreen(channel: ch, api: api),
       SettingsScreen(

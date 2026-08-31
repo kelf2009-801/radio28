@@ -23,6 +23,7 @@ class RadioScreen extends StatefulWidget {
     required this.profile,
     required this.onOpenMembers,
     required this.onLeave,
+    this.selectedMemberId,
   });
 
   final Channel channel;
@@ -31,6 +32,7 @@ class RadioScreen extends StatefulWidget {
   final Profile profile;
   final VoidCallback onOpenMembers;
   final VoidCallback onLeave;
+  final String? selectedMemberId; // null = talk to all, set = talk to selected member
 
   @override
   State<RadioScreen> createState() => _RadioScreenState();
@@ -122,21 +124,25 @@ class _RadioScreenState extends State<RadioScreen> {
     // Vibration + beep — always try, settings are secondary
     try {
       final prefs = await SharedPreferences.getInstance();
-      final vib = prefs.getBool('vibration_on') ?? true;
-      final snd = prefs.getBool('ptt_sound') ?? true;
+      final vib = prefs.getBool('ptt_vibration') ?? true;
+      final sound = prefs.getBool('ptt_sound') ?? true;
       if (vib) {
         HapticFeedback.heavyImpact();
         if (await Vibration.hasVibrator() ?? false) {
           Vibration.vibrate(duration: 100, amplitude: 255);
         }
       }
-      if (snd) {
-        await _beep.play(AssetSource('sounds/ptt_beep.wav'), volume: 0.7);
-      }
+      if (sound) await _beep.play(AssetSource('sounds/ptt_beep.wav'), volume: 1.0);
     } catch (_) {
       // PTT feedback failure is non-fatal — mic still toggles
     }
-    await widget.livekit.startTalking();
+    // If a member is selected — talk only to them (direct call)
+    if (widget.selectedMemberId != null) {
+      // TODO: implement direct PTT (mute others, unmute selected)
+      await widget.livekit.startTalking();
+    } else {
+      await widget.livekit.startTalking();
+    }
   }
 
   DateTime? _talkStart;

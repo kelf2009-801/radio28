@@ -62,13 +62,20 @@ class _MembersScreenState extends State<MembersScreen> {
   void initState() {
     super.initState();
     _load();
+    // Refresh members every 5 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) _load();
+    });
     _subSpeak = (widget.livekit.speakingStream as Stream<Set<String>>).listen((s) {
       if (mounted) setState(() => _speaking = s);
     });
   }
 
+  Timer? _refreshTimer;
+
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _subSpeak?.cancel();
     super.dispose();
   }
@@ -76,8 +83,13 @@ class _MembersScreenState extends State<MembersScreen> {
   Future<void> _load() async {
     try {
       final m = await widget.api.members(widget.channel.id) as List<Member>;
-      if (mounted) setState(() => _members = m);
-    } catch (_) {}
+      if (mounted) {
+        setState(() => _members = m);
+        print('Members loaded: ${m.length}');
+      }
+    } catch (e) {
+      print('Members load error: $e');
+    }
   }
 
   Future<void> _actions(Member m) async {

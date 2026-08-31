@@ -367,7 +367,7 @@ def _channel_json(conn: sqlite3.Connection, row: sqlite3.Row, user_id: Optional[
         "has_invite_code": bool(row["invite_code"]),
         "member_count": member_count,
         "role": role,
-        "is_direct": False,  # TODO: implement direct calls
+        "is_direct": False,
         "is_favorite": is_fav,
     }
 

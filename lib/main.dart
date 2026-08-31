@@ -5,7 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'core/theme.dart';
 import 'models/models.dart';
-import 'screens/channel_search_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/members_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -201,12 +201,11 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
     }
 
     if (_activeChannel == null) {
-      return ChannelSearchScreen(
+      return HomeScreen(
         api: api,
         auth: auth,
         onJoined: _onJoined,
         onPending: _onPending,
-        onCreated: _onJoined,
       );
     }
 

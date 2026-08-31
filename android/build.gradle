@@ -1,0 +1,63 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// Plugins written for the old Flutter Gradle API reference `flutter.compileSdkVersion`
+// inside their own `android {}` block. The new declarative plugin loader doesn't
+// create that extension on library subprojects, so we shim it globally.
+subprojects { project ->
+    project.plugins.withId("com.android.library") {
+        // Simple Expando carrying the values plugins expect under `flutter.*`
+        def flutterShim = new Expando(
+            compileSdkVersion: 35,
+            ndkVersion: "25.1.8937393",
+            minSdkVersion: 23,
+            targetSdkVersion: 35,
+        )
+        project.extensions.add("flutter", flutterShim)
+        // Force compileSdk for libraries that resolve it lazily (livekit needs 31+ for lStar)
+        project.afterEvaluate {
+            def andr = project.extensions.findByName("android")
+            if (andr != null && andr.hasProperty("compileSdkVersion") && andr.compileSdkVersion == null) {
+                andr.compileSdkVersion = 35
+            }
+        }
+    }
+}
+
+// Plugin unit-test tasks break when the project lives on a different drive than
+// the pub cache (this-and-base-files error). Force each library's buildDir to live
+// INSIDE the plugin's own folder so relative paths resolve on the same drive.
+subprojects { project ->
+    if (project.name != "app") {
+        project.buildDir = new File(project.projectDir, "build")
+    }
+    project.plugins.withId("com.android.library") {
+        def androidExt = project.extensions.findByName("android")
+        if (androidExt != null && androidExt.hasProperty("testOptions")) {
+            androidExt.testOptions.unitTests.includeAndroidResources = false
+            androidExt.testOptions.unitTests.all { it.enabled = false }
+        }
+        if (androidExt != null && androidExt.hasProperty("lint")) {
+            androidExt.lint.checkReleaseBuilds = false
+            androidExt.lint.abortOnError = false
+        }
+    }
+}
+
+rootProject.buildDir = "../build"
+subprojects {
+    if (project.name == "app") {
+        project.buildDir = "${rootProject.buildDir}/${project.name}"
+    }
+}
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}

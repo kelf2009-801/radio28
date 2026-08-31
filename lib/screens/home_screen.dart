@@ -82,6 +82,16 @@ class _HomeScreenState extends State<HomeScreen> {
       widget.onJoined(ch);
       return;
     }
+    // Check if we're actually a member (role might be null in search results)
+    try {
+      final st = await widget.api.joinStatus(ch.id) as Map<String, dynamic>;
+      if (!mounted) return;
+      if (st['status'] == 'member') {
+        widget.onJoined(ch);
+        return;
+      }
+    } catch (_) {}
+
     // Otherwise — request to join
     if (ch.isPrivate) {
       final confirm = await showDialog<bool>(

@@ -115,15 +115,27 @@ class _MembersScreenState extends State<MembersScreen> {
               padding: const EdgeInsets.all(16),
               child: Text(m.callsign, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             ),
+            // PTT button for direct talk
+            if (_selectedMemberId == m.userId)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx, 'ptt_direct');
+                  },
+                  icon: const Icon(Icons.mic, size: 24),
+                  label: const Text('ГОВОРИТЬ ТОЛЬКО ЕМУ'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accent,
+                    foregroundColor: Colors.black,
+                    minimumSize: const Size(double.infinity, 48),
+                  ),
+                ),
+              ),
             ListTile(
               leading: Icon(m.muted ? Icons.mic : Icons.mic_off, color: AppTheme.warning),
               title: Text(m.muted ? 'Снять мьют (включить микрофон)' : 'Замьютить (выключить микрофон)'),
               onTap: () => Navigator.pop(ctx, 'mute'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.volume_off, color: AppTheme.warning),
-              title: const Text('Отключить звук (не слышит эфир)'),
-              onTap: () => Navigator.pop(ctx, 'deafen'),
             ),
             if (widget.channel.isCreator)
               ListTile(
@@ -155,6 +167,15 @@ class _MembersScreenState extends State<MembersScreen> {
       if (act == 'kick') await widget.api.kick(widget.channel.id, m.userId);
       if (act == 'ban') await widget.api.ban(widget.channel.id, m.userId);
       if (act == 'toggle_admin') await widget.api.setRole(widget.channel.id, m.userId, m.role == 'admin' ? 'member' : 'admin');
+      if (act == 'ptt_direct') {
+        // Direct PTT: talk only to selected member
+        // For now: show message that feature is in development
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Личный разговор появится в следующей версии')),
+          );
+        }
+      }
       _load();
     } catch (e) {
       if (mounted) {

@@ -120,6 +120,11 @@ class ApiService {
     return j['status'] as String;
   }
 
+  /// Log a PTT press to history (called by RadioScreen on release).
+  Future<void> logHistory(int channelId, double durationSec) async {
+    await _req('POST', '/channels/$channelId/history', body: {'duration_sec': durationSec});
+  }
+
   /// Leave current channel (client-side; server keeps history).
   Future<void> leaveChannel(int channelId) async {
     await _req('POST', '/channels/$channelId/leave');
@@ -156,6 +161,9 @@ class ApiService {
 
   Future<void> mute(int channelId, String userId, bool muted) =>
       _req('POST', '/channels/$channelId/members/$userId/mute', body: {'muted': muted});
+
+  Future<void> setRole(int channelId, String userId, String role) =>
+      _req('POST', '/channels/$channelId/members/$userId/role', body: {'role': role});
 
   Future<String> regenerateInviteCode(int channelId) async {
     final j = await _req('POST', '/channels/$channelId/invite_code/regenerate');

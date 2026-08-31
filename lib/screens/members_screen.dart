@@ -69,10 +69,29 @@ class _MembersScreenState extends State<MembersScreen> {
               child: Text(m.callsign, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             ),
             ListTile(
+              leading: const Icon(Icons.record_voice_over, color: AppTheme.accent),
+              title: const Text('Говорить только ему'),
+              subtitle: const Text('Личный вызов (в разработке)', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+              onTap: () => Navigator.pop(ctx, 'private_call'),
+            ),
+            const Divider(height: 1),
+            ListTile(
               leading: Icon(m.muted ? Icons.mic : Icons.mic_off, color: AppTheme.warning),
-              title: Text(m.muted ? 'Снять мьют' : 'Замьютить'),
+              title: Text(m.muted ? 'Снять мьют (включить микрофон)' : 'Замьютить (выключить микрофон)'),
               onTap: () => Navigator.pop(ctx, 'mute'),
             ),
+            ListTile(
+              leading: const Icon(Icons.volume_off, color: AppTheme.warning),
+              title: const Text('Отключить звук (не слышит эфир)'),
+              onTap: () => Navigator.pop(ctx, 'deafen'),
+            ),
+            if (widget.channel.isCreator)
+              ListTile(
+                leading: const Icon(Icons.shield_outlined, color: AppTheme.accent),
+                title: Text(m.role == 'admin' ? 'Снять админа' : 'Назначить админом'),
+                onTap: () => Navigator.pop(ctx, 'toggle_admin'),
+              ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.exit_to_app, color: AppTheme.danger),
               title: const Text('Кикнуть из канала'),
@@ -81,7 +100,7 @@ class _MembersScreenState extends State<MembersScreen> {
             if (widget.channel.isCreator)
               ListTile(
                 leading: const Icon(Icons.block, color: AppTheme.danger),
-                title: const Text('Забанить'),
+                title: const Text('Забанить (не сможет вернуться)'),
                 onTap: () => Navigator.pop(ctx, 'ban'),
               ),
             const SizedBox(height: 8),
@@ -94,6 +113,14 @@ class _MembersScreenState extends State<MembersScreen> {
       if (act == 'mute') await widget.api.mute(widget.channel.id, m.userId, !m.muted);
       if (act == 'kick') await widget.api.kick(widget.channel.id, m.userId);
       if (act == 'ban') await widget.api.ban(widget.channel.id, m.userId);
+      if (act == 'toggle_admin') await widget.api.setRole(widget.channel.id, m.userId, m.role == 'admin' ? 'member' : 'admin');
+      if (act == 'private_call') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Личный вызов появится в следующей версии')),
+          );
+        }
+      }
       _load();
     } catch (e) {
       if (mounted) {
@@ -193,6 +220,19 @@ class _MembersScreenState extends State<MembersScreen> {
           ),
         ),
         body: body,
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: AppTheme.accent,
+          foregroundColor: Colors.black,
+          icon: const Icon(Icons.mic),
+          label: const Text('Говорить', style: TextStyle(fontWeight: FontWeight.w700)),
+          onPressed: () {
+            // Switch to Radio tab (index 0) — the main PTT is there
+            // This is a hint: user taps the big PTT on Radio tab
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Перейди на вкладку «Рация» — там большая кнопка')),
+            );
+          },
+        ),
       );
     }
 

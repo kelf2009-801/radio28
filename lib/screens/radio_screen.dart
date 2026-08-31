@@ -112,6 +112,7 @@ class _RadioScreenState extends State<RadioScreen> {
   Future<void> _pttDown() async {
     if (_pressed) return;
     setState(() => _pressed = true);
+    _talkStart = DateTime.now();
     // Vibration + beep — always try, settings are secondary
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -132,6 +133,8 @@ class _RadioScreenState extends State<RadioScreen> {
     await widget.livekit.startTalking();
   }
 
+  DateTime? _talkStart;
+
   Future<void> _pttUp() async {
     if (!_pressed) return;
     setState(() => _pressed = false);
@@ -143,6 +146,16 @@ class _RadioScreenState extends State<RadioScreen> {
       }
     } catch (_) {}
     await widget.livekit.stopTalking();
+    // Log to history
+    if (_talkStart != null) {
+      final dur = DateTime.now().difference(_talkStart!).inMilliseconds / 1000.0;
+      if (dur > 0.3) {
+        try {
+          await widget.api.logHistory(widget.channel.id, dur);
+        } catch (_) {}
+      }
+      _talkStart = null;
+    }
   }
 
   String get _speakingName {

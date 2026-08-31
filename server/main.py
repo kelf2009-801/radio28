@@ -252,6 +252,10 @@ class MuteBody(BaseModel):
     muted: bool
 
 
+class RoleBody(BaseModel):
+    role: str  # 'admin' | 'member'
+
+
 # ---------------- auth endpoints ----------------
 
 @app.post("/auth/register")
@@ -657,6 +661,36 @@ def mute(cid: int, uid: str, body: MuteBody, user: sqlite3.Row = Depends(current
         )
     _notify_user_sync(uid, {
         "type": "muted" if body.muted else "unmuted", "channel_id": cid,
+    })
+    return {"ok": True}
+
+
+@app.post("/channels/{cid}/members/{uid}/role")
+def set_role(cid: int, uid: str, body: RoleBody, user: sqlite3.Row = Depends(current_user)):
+    if body.role not in ("admin", "member"):
+        raise HTTPException(400, "bad_role")
+    with get_db() as conn:
+        # Only creator can promote/demote admins
+        actor = conn.execute(
+            "SELECT role FROM members WHERE channel_id = ? AND user_id = ?",
+            (cid, user["id"]),
+        ).fetchone()
+        if not actor or actor["role"] != "creator":
+            raise HTTPException(403, "only_creator")
+        target = conn.execute(
+            "SELECT role FROM members WHERE channel_id = ? AND user_id = ?",
+            (cid, uid),
+        ).fetchone()
+        if not target:
+            raise HTTPException(404, "not_a_member")
+        if target["role"] == "creator":
+            raise HTTPException(403, "cant_touch_creator")
+        conn.execute(
+            "UPDATE members SET role = ? WHERE channel_id = ? AND user_id = ?",
+            (body.role, cid, uid),
+        )
+    _notify_user_sync(uid, {
+        "type": "role_changed", "channel_id": cid, "role": body.role,
     })
     return {"ok": True}
 

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 import '../models/models.dart';
+import '../services/auth_service.dart';
 import 'create_channel_screen.dart';
+import 'settings_screen.dart';
 
 /// Channel search + join flow (open -> instant, private -> request to admin,
 /// invite code -> auto accept). FAB creates a new channel.
@@ -12,12 +14,14 @@ class ChannelSearchScreen extends StatefulWidget {
   const ChannelSearchScreen({
     super.key,
     required this.api,
+    required this.auth,
     required this.onJoined,
     required this.onPending,
     required this.onCreated,
   });
 
-  final dynamic api; // ApiService (kept dynamic to avoid import cycles in tests)
+  final dynamic api;
+  final AuthService auth;
   final void Function(Channel channel) onJoined;
   final void Function(Channel channel) onPending;
   final void Function(Channel channel) onCreated;
@@ -131,7 +135,29 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Найти канал')),
+      appBar: AppBar(
+        title: const Text('Найти канал'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary),
+            tooltip: 'Настройки',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SettingsScreen(
+                    auth: widget.auth,
+                    channel: null,
+                    api: widget.api,
+                    onLeaveChannel: () {},
+                    onUpdateProfile: (_) async {},
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppTheme.accent,
         foregroundColor: Colors.black,

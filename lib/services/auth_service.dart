@@ -79,14 +79,13 @@ class AuthService {
     await p.setBool(key, value);
   }
 
-  /// Update profile route (settings screen) — re-register on server with same key.
-  Future<void> updateRoute(String? route) async {
+  /// Update profile fields (settings screen) — re-register on server with same key.
+  Future<void> updateProfile({String? callsign, String? route, int? avatarColor}) async {
     if (profile == null) return;
-    profile = Profile(
-      userId: profile!.userId,
-      callsign: profile!.callsign,
-      route: route,
-      publicKeyPem: profile!.publicKeyPem,
+    profile = profile!.copyWith(
+      callsign: callsign ?? profile!.callsign,
+      route: route ?? profile!.route,
+      avatarColor: avatarColor ?? profile!.avatarColor,
     );
     await _storage.write(key: _kProfile, value: profile!.encode());
   }
@@ -95,6 +94,7 @@ class AuthService {
   Future<Profile> register({
     required String callsign,
     String? route,
+    int avatarColor = 0,
   }) async {
     final pair = _generateRsaKeyPair();
     _priv = pair.privateKey as pc.RSAPrivateKey;
@@ -108,6 +108,7 @@ class AuthService {
       callsign: callsign.trim(),
       route: route?.trim().isEmpty ?? true ? null : route!.trim(),
       publicKeyPem: pubPem,
+      avatarColor: avatarColor,
     );
 
     await _storage.write(key: _kPrivKey, value: privPem);

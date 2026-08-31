@@ -19,6 +19,7 @@ class RadioScreen extends StatefulWidget {
     required this.livekit,
     required this.profile,
     required this.onOpenMembers,
+    required this.onLeave,
   });
 
   final Channel channel;
@@ -26,6 +27,7 @@ class RadioScreen extends StatefulWidget {
   final dynamic livekit; // LiveKitService
   final Profile profile;
   final VoidCallback onOpenMembers;
+  final VoidCallback onLeave;
 
   @override
   State<RadioScreen> createState() => _RadioScreenState();
@@ -132,11 +134,16 @@ class _RadioScreenState extends State<RadioScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
+            // Header with BACK button
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              padding: const EdgeInsets.fromLTRB(8, 12, 16, 8),
               child: Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: AppTheme.textSecondary),
+                    onPressed: widget.onLeave,
+                    tooltip: 'К поиску каналов',
+                  ),
                   const Icon(Icons.settings_input_antenna, color: AppTheme.accent, size: 22),
                   const SizedBox(width: 8),
                   Expanded(

@@ -6,12 +6,14 @@ class Profile {
   final String callsign;
   final String? route;
   final String publicKeyPem;
+  final int avatarColor; // index into palette
 
   const Profile({
     required this.userId,
     required this.callsign,
     this.route,
     required this.publicKeyPem,
+    this.avatarColor = 0,
   });
 
   Map<String, dynamic> toJson() => {
@@ -19,6 +21,7 @@ class Profile {
         'callsign': callsign,
         'route': route,
         'public_key': publicKeyPem,
+        'avatar_color': avatarColor,
       };
 
   factory Profile.fromJson(Map<String, dynamic> j) => Profile(
@@ -26,6 +29,15 @@ class Profile {
         callsign: j['callsign'] as String,
         route: j['route'] as String?,
         publicKeyPem: j['public_key'] as String? ?? '',
+        avatarColor: j['avatar_color'] as int? ?? 0,
+      );
+
+  Profile copyWith({String? callsign, String? route, int? avatarColor}) => Profile(
+        userId: userId,
+        callsign: callsign ?? this.callsign,
+        route: route ?? this.route,
+        publicKeyPem: publicKeyPem,
+        avatarColor: avatarColor ?? this.avatarColor,
       );
 
   String encode() => jsonEncode(toJson());

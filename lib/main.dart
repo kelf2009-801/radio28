@@ -124,8 +124,8 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _onOnboarded(String callsign, String route) async {
-    await auth.register(callsign: callsign, route: route.isEmpty ? null : route);
+  Future<void> _onOnboarded(String callsign, String route, int avatarColor) async {
+    await auth.register(callsign: callsign, route: route.isEmpty ? null : route, avatarColor: avatarColor);
     await api.registerOnServer();
     await api.login();
     await ws.connect();
@@ -204,6 +204,7 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
     if (_activeChannel == null) {
       return ChannelSearchScreen(
         api: api,
+        auth: auth,
         onJoined: _onJoined,
         onPending: _onPending,
         onCreated: _onJoined,
@@ -217,6 +218,7 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
         api: api,
         livekit: livekit,
         profile: auth.profile!,
+        onLeave: _leaveChannel,
         onOpenMembers: () => Navigator.push(
           context,
           MaterialPageRoute(
@@ -236,7 +238,7 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
         api: api,
         onLeaveChannel: _leaveChannel,
         onUpdateProfile: (route) async {
-          await auth.updateRoute(route);
+          await auth.updateProfile(route: route);
           try {
             await api.registerOnServer();
           } catch (_) {}

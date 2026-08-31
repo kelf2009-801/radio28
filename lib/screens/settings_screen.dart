@@ -75,16 +75,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _group('Профиль', [
             ListTile(
-              leading: CircleAvatar(
-                backgroundColor: AppTheme.accentDim,
-                child: Text(
-                  (p?.callsign.isNotEmpty ?? false) ? p!.callsign[0].toUpperCase() : '?',
-                  style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700),
-                ),
-              ),
+              leading: _avatarWidget(p),
               title: Text(p?.callsign ?? '—', style: const TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: const Text('Позывной (не меняется)',
+              subtitle: const Text('Нажми чтобы сменить позывной',
                   style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+              trailing: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.textMuted),
+              onTap: _editCallsign,
+            ),
+            ListTile(
+              leading: const Icon(Icons.palette_outlined, color: AppTheme.textSecondary),
+              title: const Text('Цвет аватарки'),
+              trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+              onTap: _pickAvatarColor,
             ),
             ListTile(
               leading: const Icon(Icons.route_outlined, color: AppTheme.textSecondary),
@@ -258,6 +260,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Widget _avatarWidget(Profile? p) {
+    const colors = [
+      Color(0xFF00FF8C), Color(0xFF4D9FFF), Color(0xFFFFB84D),
+      Color(0xFFFF6B9D), Color(0xFFB98CFF), Color(0xFFFF5C5C),
+    ];
+    final color = colors[(p?.avatarColor ?? 0) % colors.length];
+    return CircleAvatar(
+      backgroundColor: color.withOpacity(0.2),
+      child: Text(
+        (p?.callsign.isNotEmpty ?? false) ? p!.callsign[0].toUpperCase() : '?',
+        style: TextStyle(color: color, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
   Widget _group(String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,6 +316,77 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (result == null) return;
     await widget.onUpdateProfile(result.isEmpty ? null : result);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _editCallsign() async {
+    final p = widget.auth.profile as Profile?;
+    final ctrl = TextEditingController(text: p?.callsign ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Позывной'),
+        content: TextField(
+          controller: ctrl,
+          maxLength: 20,
+          decoration: const InputDecoration(hintText: 'Как тебя слышать', counterText: ''),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('Сохранить', style: TextStyle(color: AppTheme.accent)),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.length < 2) return;
+    final a = widget.auth;
+    await a.updateProfile(callsign: result);
+    try {
+      await widget.api.registerOnServer();
+    } catch (_) {}
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _pickAvatarColor() async {
+    const colors = [
+      Color(0xFF00FF8C), Color(0xFF4D9FFF), Color(0xFFFFB84D),
+      Color(0xFFFF6B9D), Color(0xFFB98CFF), Color(0xFFFF5C5C),
+    ];
+    final p = widget.auth.profile as Profile?;
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Цвет аватарки'),
+        content: Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: List.generate(colors.length, (i) {
+            final sel = i == (p?.avatarColor ?? 0);
+            return GestureDetector(
+              onTap: () => Navigator.pop(ctx, i),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: colors[i],
+                  shape: BoxShape.circle,
+                  border: sel ? Border.all(color: Colors.white, width: 3) : null,
+                ),
+                child: sel ? const Icon(Icons.check, color: Colors.black, size: 20) : null,
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+    if (result == null) return;
+    final a = widget.auth;
+    await a.updateProfile(avatarColor: result);
+    try {
+      await widget.api.registerOnServer();
+    } catch (_) {}
     if (mounted) setState(() {});
   }
 }

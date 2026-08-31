@@ -89,6 +89,16 @@ class _ChannelSearchScreenState extends State<ChannelSearchScreen> {
   Future<void> _join(Channel ch) async {
     String? code;
 
+    // If already a member (creator/admin/member) — enter directly, no dialog.
+    try {
+      final st = await widget.api.joinStatus(ch.id) as Map<String, dynamic>;
+      if (!mounted) return;
+      if (st['status'] == 'member') {
+        widget.onJoined(ch);
+        return;
+      }
+    } catch (_) {}
+
     if (ch.hasInviteCode) {
       code = await _askCode(ch);
       if (code == null) return; // cancelled

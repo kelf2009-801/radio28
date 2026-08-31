@@ -10,6 +10,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../core/theme.dart';
 import '../models/models.dart';
+import 'requests_screen.dart';
 
 /// Main radio screen: big PTT button, who is speaking, volume slider, members preview.
 class RadioScreen extends StatefulWidget {
@@ -116,11 +117,13 @@ class _RadioScreenState extends State<RadioScreen> {
       if (vib) {
         HapticFeedback.heavyImpact();
         if (await Vibration.hasVibrator() ?? false) {
-          Vibration.vibrate(duration: 60, amplitude: 128);
+          Vibration.vibrate(duration: 100, amplitude: 255);
         }
       }
       if (snd) {
+        // System alert sound + haptic pattern for feedback
         await SystemSound.play(SystemSoundType.alert);
+        HapticFeedback.vibrate();
       }
     } catch (_) {
       // PTT feedback failure is non-fatal — mic still toggles
@@ -193,6 +196,17 @@ class _RadioScreenState extends State<RadioScreen> {
                     icon: const Icon(Icons.people_outline, color: AppTheme.textSecondary),
                     onPressed: widget.onOpenMembers,
                   ),
+                  if (widget.channel.isAdmin)
+                    IconButton(
+                      icon: const Icon(Icons.person_add_alt, color: AppTheme.accent),
+                      tooltip: 'Запросы на вход',
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RequestsScreen(channel: widget.channel, api: widget.api),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

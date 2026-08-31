@@ -265,17 +265,6 @@ class _Radio28AppState extends State<Radio28App> with WidgetsBindingObserver {
           const BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Настройки'),
         ],
       ),
-      floatingActionButton: ch.isAdmin
-          ? FloatingActionButton.small(
-              backgroundColor: AppTheme.card,
-              foregroundColor: AppTheme.accent,
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => RequestsScreen(channel: ch, api: api)),
-              ),
-              child: const Icon(Icons.person_add_alt),
-            )
-          : null,
     );
   }
 }

@@ -32,7 +32,7 @@ class AuthService {
 
   static const defaultServer = String.fromEnvironment(
     'RADIO_SERVER',
-    defaultValue: 'http://192.168.0.191:8000', // LAN (дома); на VPS заменю при сборке
+    defaultValue: 'https://manufacturer-non-assurance-initial.trycloudflare.com',
   );
 
   Future<String> get serverUrl async {

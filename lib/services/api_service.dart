@@ -130,15 +130,26 @@ class ApiService {
   }
 
   /// Create a 1-on-1 direct channel with another user.
+  /// If channel already exists — return it instead of error.
   Future<Channel> createDirectChannel(String otherUserId) async {
     final myId = auth.profile!.userId;
     final name = 'direct_${myId}_$otherUserId';
-    final j = await _req('POST', '/channels', body: {
-      'name': name,
-      'is_private': true,
-      'is_direct': true,
-    });
-    return Channel.fromJson(j['channel']);
+    try {
+      final j = await _req('POST', '/channels', body: {
+        'name': name,
+        'is_private': true,
+        'is_direct': true,
+      });
+      return Channel.fromJson(j['channel']);
+    } catch (e) {
+      if (e.toString().contains('channel_name_taken')) {
+        // Channel exists — find it and return
+        final all = await searchChannels(name);
+        final existing = all.firstWhere((c) => c.name == name, orElse: () => throw e);
+        return existing;
+      }
+      rethrow;
+    }
   }
 
   /// Join request flow. Returns 'member' | 'pending'

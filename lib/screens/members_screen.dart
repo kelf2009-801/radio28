@@ -89,6 +89,11 @@ class _MembersScreenState extends State<MembersScreen> {
       }
     } catch (e) {
       print('Members load error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки участников: $e')),
+        );
+      }
     }
   }
 

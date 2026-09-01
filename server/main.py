@@ -285,8 +285,8 @@ def register(body: RegisterBody):
             old_id = existing_by_callsign["id"]
             # Update key and route for existing user
             conn.execute(
-                "UPDATE users SET route = ?, public_key = ? WHERE id = ?",
-                (body.route, body.public_key, old_id),
+                "UPDATE users SET route = ?, public_key = ?, avatar_base64 = ? WHERE id = ?",
+                (body.route, body.public_key, body.avatar_base64, old_id),
             )
             return {"ok": True, "user_id": old_id, "existing": True}
         
@@ -294,13 +294,13 @@ def register(body: RegisterBody):
         existing_by_id = conn.execute("SELECT id FROM users WHERE id = ?", (body.user_id,)).fetchone()
         if existing_by_id:
             conn.execute(
-                "UPDATE users SET callsign = ?, route = ?, public_key = ? WHERE id = ?",
-                (body.callsign, body.route, body.public_key, body.user_id),
+                "UPDATE users SET callsign = ?, route = ?, public_key = ?, avatar_base64 = ? WHERE id = ?",
+                (body.callsign, body.route, body.public_key, body.avatar_base64, body.user_id),
             )
         else:
             conn.execute(
-                "INSERT INTO users (id, callsign, route, public_key, created_at) VALUES (?,?,?,?,?)",
-                (body.user_id, body.callsign, body.route, body.public_key, time.time()),
+                "INSERT INTO users (id, callsign, route, public_key, avatar_base64, created_at) VALUES (?,?,?,?,?,?)",
+                (body.user_id, body.callsign, body.route, body.public_key, body.avatar_base64, time.time()),
             )
         _ = is_first_user  # noqa: F841
     return {"ok": True, "first_user": is_first_user}

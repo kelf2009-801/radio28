@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -43,10 +44,13 @@ class _MemberAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Show photo if available, else initial with color
-    if (member.avatarPath != null && member.avatarPath!.isNotEmpty) {
-      return CircleAvatar(
-        backgroundImage: FileImage(File(member.avatarPath!)),
-      );
+    if (member.avatarBase64 != null && member.avatarBase64!.isNotEmpty) {
+      try {
+        final bytes = base64Decode(member.avatarBase64!);
+        return CircleAvatar(
+          backgroundImage: MemoryImage(bytes),
+        );
+      } catch (_) {}
     }
     final bgColor = speaking
         ? AppTheme.accent

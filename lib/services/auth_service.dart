@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
@@ -123,6 +124,15 @@ class AuthService {
 
     final pubPem = _encodePublicKeyToPem(_pub!);
     
+    // Convert avatar to base64 for server
+    String? avatarBase64;
+    if (avatarPath != null) {
+      try {
+        final bytes = await File(avatarPath).readAsBytes();
+        avatarBase64 = base64Encode(bytes);
+      } catch (_) {}
+    }
+    
     // Use device ID as stable user ID
     final stableId = 'device_$deviceId';
 
@@ -132,6 +142,7 @@ class AuthService {
       route: route?.trim().isEmpty ?? true ? null : route!.trim(),
       publicKeyPem: pubPem,
       avatarPath: avatarPath,
+      avatarBase64: avatarBase64,
     );
 
     await _storage.write(key: _kUserId, value: stableId);

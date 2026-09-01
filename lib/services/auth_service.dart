@@ -92,6 +92,17 @@ class AuthService {
     await _storage.write(key: _kProfile, value: profile!.encode());
   }
 
+  /// Get or create stable device ID — survives reinstall via SharedPreferences
+  Future<String> _getOrCreateDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? deviceId = prefs.getString('device_id');
+    if (deviceId == null) {
+      deviceId = const Uuid().v4();
+      await prefs.setString('device_id', deviceId);
+    }
+    return deviceId;
+  }
+
   /// First-run registration: generate keypair, register on server.
   /// If user exists with same callsign — adopt their ID (same person, new install).
   Future<Profile> register({
@@ -100,12 +111,7 @@ class AuthService {
     String? avatarPath,
   }) async {
     // Get or create stable device ID
-    final prefs = await SharedPreferences.getInstance();
-    String? deviceId = prefs.getString('device_id');
-    if (deviceId == null) {
-      deviceId = const Uuid().v4();
-      await prefs.setString('device_id', deviceId);
-    }
+    final deviceId = await _getOrCreateDeviceId();
 
     // Generate or load keys
     final existingPriv = await _storage.read(key: _kPrivKey);

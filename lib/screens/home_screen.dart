@@ -407,10 +407,6 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pop(context);
               // TODO: open history
             }),
-            _drawerItem(Icons.people_outline, 'Контакты', null, onTap: () {
-              Navigator.pop(context);
-              // TODO: open contacts
-            }),
             const Divider(color: AppTheme.border),
             _drawerItem(Icons.settings_outlined, 'Настройки', null, onTap: () {
               Navigator.pop(context);

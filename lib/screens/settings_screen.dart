@@ -78,20 +78,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _group('Профиль', [
             ListTile(
-              leading: _avatarWidget(p),
-              title: Text(p?.callsign ?? '—', style: const TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: const Text('Нажми чтобы сменить позывной',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-              trailing: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.textMuted),
-              onTap: _editCallsign,
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined, color: AppTheme.textSecondary),
-              title: const Text('Фото профиля'),
-              subtitle: const Text('Выбрать из галереи',
+              leading: const Icon(Icons.search, color: AppTheme.textSecondary),
+              title: const Text('Поиск каналов'),
+              subtitle: const Text('Найти канал по названию',
                   style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
               trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
-              onTap: _pickAvatarPhoto,
+              onTap: () {
+                Navigator.pop(context); // close settings
+                // Switch to Home tab (search) — handled by parent
+                // For now: just close settings, user taps search manually
+              },
             ),
           ]),
           if (ch != null) ...[

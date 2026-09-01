@@ -1,6 +1,11 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart';
 
 import '../core/theme.dart';
 import '../models/models.dart';
@@ -159,6 +164,7 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   String? _selectedMemberId;
+  bool _pressedDirect = false;
 
   void _onMemberTap(Member m) {
     // Toggle selection for direct talk
@@ -175,6 +181,39 @@ class _MembersScreenState extends State<MembersScreen> {
 
   /// Get the currently selected member ID for direct talk (null = talk to all)
   String? get selectedMemberId => _selectedMemberId;
+
+  Future<void> _pttDownDirect() async {
+    if (_pressedDirect) return;
+    setState(() => _pressedDirect = true);
+    // Vibration + beep
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final vib = prefs.getBool('ptt_vibration') ?? true;
+      final sound = prefs.getBool('ptt_sound') ?? true;
+      if (vib) {
+        HapticFeedback.heavyImpact();
+        if (await Vibration.hasVibrator() ?? false) {
+          Vibration.vibrate(duration: 100, amplitude: 255);
+        }
+      }
+      if (sound) await _beep.play(AssetSource('sounds/ptt_beep.wav'), volume: 1.0);
+    } catch (_) {}
+    // TODO: implement direct PTT (mute others, unmute selected)
+    await widget.livekit.startTalking();
+  }
+
+  Future<void> _pttUpDirect() async {
+    if (!_pressedDirect) return;
+    setState(() => _pressedDirect = false);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final sound = prefs.getBool('ptt_sound') ?? true;
+      if (sound) await _beep.play(AssetSource('sounds/ptt_beep.wav'), volume: 0.5);
+    } catch (_) {}
+    await widget.livekit.stopTalking();
+  }
+
+  final AudioPlayer _beep = AudioPlayer();
 
   @override
   Widget build(BuildContext context) {
@@ -262,7 +301,39 @@ class _MembersScreenState extends State<MembersScreen> {
             ),
           ),
         ),
-        body: body,
+        body: Stack(
+          children: [
+            body,
+            // PTT button for direct talk (when member selected)
+            if (_selectedMemberId != null)
+              Positioned(
+                bottom: 100,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: GestureDetector(
+                    onTapDown: (_) => _pttDownDirect(),
+                    onTapUp: (_) => _pttUpDirect(),
+                    onTapCancel: () => _pttUpDirect(),
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _pressedDirect ? AppTheme.accent : AppTheme.card,
+                        border: Border.all(color: AppTheme.accent, width: 3),
+                      ),
+                      child: Icon(
+                        Icons.mic,
+                        size: 48,
+                        color: _pressedDirect ? Colors.black : AppTheme.accent,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
         floatingActionButton: FloatingActionButton.extended(
           backgroundColor: AppTheme.accent,
           foregroundColor: Colors.black,

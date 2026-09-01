@@ -71,6 +71,7 @@ class ApiService {
     }
   }
 
+  /// Register on server with avatar
   Future<void> registerOnServer() async {
     final p = auth.profile!;
     final j = await _req('POST', '/auth/register', body: p.toJson(), authRequired: false);
@@ -85,6 +86,7 @@ class ApiService {
           route: p.route,
           publicKeyPem: p.publicKeyPem,
           avatarPath: p.avatarPath,
+          avatarBase64: p.avatarBase64,
         );
         await auth.saveProfile();
       }

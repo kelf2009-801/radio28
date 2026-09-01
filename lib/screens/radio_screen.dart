@@ -222,17 +222,16 @@ class _RadioScreenState extends State<RadioScreen> {
                     icon: const Icon(Icons.people_outline, color: AppTheme.textSecondary),
                     onPressed: widget.onOpenMembers,
                   ),
-                  if (widget.channel.isAdmin)
-                    IconButton(
-                      icon: const Icon(Icons.person_add_alt, color: AppTheme.accent),
-                      tooltip: 'Запросы на вход',
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => RequestsScreen(channel: widget.channel, api: widget.api),
-                        ),
+                  IconButton(
+                    icon: const Icon(Icons.person_add_alt, color: AppTheme.accent),
+                    tooltip: 'Запросы на вход',
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RequestsScreen(channel: widget.channel, api: widget.api),
                       ),
                     ),
+                  ),
                 ],
               ),
             ),

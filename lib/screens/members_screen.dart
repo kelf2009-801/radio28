@@ -334,19 +334,7 @@ class _MembersScreenState extends State<MembersScreen> {
               ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          backgroundColor: AppTheme.accent,
-          foregroundColor: Colors.black,
-          icon: const Icon(Icons.mic),
-          label: const Text('Говорить', style: TextStyle(fontWeight: FontWeight.w700)),
-          onPressed: () {
-            // Switch to Radio tab (index 0) — the main PTT is there
-            // This is a hint: user taps the big PTT on Radio tab
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Перейди на вкладку «Рация» — там большая кнопка')),
-            );
-          },
-        ),
+        floatingActionButton: null,
       );
     }
 

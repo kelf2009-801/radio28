@@ -357,6 +357,9 @@ def _channel_json(conn: sqlite3.Connection, row: sqlite3.Row, user_id: Optional[
             (row["id"], user_id),
         ).fetchone()
         is_fav = f is not None
+    # If called from my_channels — role is in the row already
+    if "user_role" in row.keys():
+        role = row["user_role"]
     return {
         "id": row["id"],
         "name": row["name"],
@@ -389,7 +392,9 @@ def search_channels(q: Optional[str] = Query(None), user: sqlite3.Row = Depends(
 def my_channels(user: sqlite3.Row = Depends(current_user)):
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT c.* FROM channels c JOIN members m ON m.channel_id = c.id WHERE m.user_id = ?",
+            "SELECT c.*, m.role as user_role FROM channels c "
+            "JOIN members m ON m.channel_id = c.id "
+            "WHERE m.user_id = ? ORDER BY c.created_at DESC",
             (user["id"],),
         ).fetchall()
         return {"channels": [_channel_json(conn, r, user["id"]) for r in rows]}

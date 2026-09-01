@@ -119,21 +119,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _joinOrEnter(Channel ch) async {
-    // If we have role from any source — enter directly
-    if (ch.role != null) {
-      widget.onJoined(ch);
-      return;
-    }
-
     // Check if we're actually a member (call server to be sure)
     try {
       final st = await widget.api.joinStatus(ch.id) as Map<String, dynamic>;
+      print('Join status for ${ch.name}: $st');
       if (!mounted) return;
       if (st['status'] == 'member') {
         widget.onJoined(ch);
         return;
       }
-    } catch (_) {}
+    } catch (e) {
+      print('Join status error: $e');
+    }
 
     // Not a member — need to join
     if (ch.isPrivate) {

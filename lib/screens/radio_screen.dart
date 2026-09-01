@@ -136,13 +136,7 @@ class _RadioScreenState extends State<RadioScreen> {
     } catch (_) {
       // PTT feedback failure is non-fatal — mic still toggles
     }
-    // If a member is selected — talk only to them (direct call)
-    if (widget.selectedMemberId != null) {
-      // TODO: implement direct PTT (mute others, unmute selected)
-      await widget.livekit.startTalking();
-    } else {
-      await widget.livekit.startTalking();
-    }
+    await widget.livekit.startTalking();
   }
 
   DateTime? _talkStart;

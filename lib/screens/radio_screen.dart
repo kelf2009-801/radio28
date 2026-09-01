@@ -167,7 +167,8 @@ class _RadioScreenState extends State<RadioScreen> {
   String get _speakingName {
     if (_speaking.isEmpty) return '';
     final id = _speaking.first;
-    // identity == userId; display as short id for now, members screen maps to callsign
+    // Try to find callsign from members list (loaded via API)
+    // For now: show short ID, will be improved with members mapping
     return id.length > 8 ? id.substring(0, 8) : id;
   }
 
@@ -308,16 +309,19 @@ class _RadioScreenState extends State<RadioScreen> {
                 height: 150,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _pressed ? AppTheme.accent : AppTheme.card,
-                  border: Border.all(color: AppTheme.accent, width: 3),
+                  color: _pressed ? AppTheme.danger : AppTheme.card,
+                  border: Border.all(
+                    color: _pressed ? AppTheme.danger : AppTheme.accent,
+                    width: 3,
+                  ),
                   boxShadow: _pressed
-                      ? [BoxShadow(color: AppTheme.accent.withOpacity(0.5), blurRadius: 40, spreadRadius: 4)]
+                      ? [BoxShadow(color: AppTheme.danger.withOpacity(0.5), blurRadius: 40, spreadRadius: 4)]
                       : null,
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.mic, size: 40, color: _pressed ? Colors.black : AppTheme.accent),
+                    Icon(Icons.mic, size: 40, color: _pressed ? Colors.white : AppTheme.accent),
                     const SizedBox(height: 6),
                     Text(
                       _pressed ? 'ГОВОРЮ' : 'ГОВОРИТЬ',
@@ -325,7 +329,7 @@ class _RadioScreenState extends State<RadioScreen> {
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1,
-                        color: _pressed ? Colors.black : AppTheme.accent,
+                        color: _pressed ? Colors.white : AppTheme.accent,
                       ),
                     ),
                   ],

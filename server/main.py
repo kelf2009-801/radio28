@@ -275,35 +275,32 @@ class RoleBody(BaseModel):
 def register(body: RegisterBody):
     with get_db() as conn:
         is_first_user = conn.execute("SELECT 1 FROM users LIMIT 1").fetchone() is None
-        existing = conn.execute("SELECT id FROM users WHERE id = ?", (body.user_id,)).fetchone()
-        if existing:
-            # idempotent re-register (reinstall keeps uuid) — update callsign
+        # First: check if callsign already exists — same user, adopt old ID
+        existing_by_callsign = conn.execute(
+            "SELECT id FROM users WHERE callsign = ?", (body.callsign,)
+        ).fetchone()
+        if existing_by_callsign:
+            old_id = existing_by_callsign["id"]
+            # Update key and route for existing user
+            conn.execute(
+                "UPDATE users SET route = ?, public_key = ? WHERE id = ?",
+                (body.route, body.public_key, old_id),
+            )
+            return {"ok": True, "user_id": old_id, "existing": True}
+        
+        # Check if user_id already exists (same device)
+        existing_by_id = conn.execute("SELECT id FROM users WHERE id = ?", (body.user_id,)).fetchone()
+        if existing_by_id:
             conn.execute(
                 "UPDATE users SET callsign = ?, route = ?, public_key = ? WHERE id = ?",
                 (body.callsign, body.route, body.public_key, body.user_id),
             )
         else:
-            # Check if callsign already exists — same user with new key (reinstall)
-            by_callsign = conn.execute(
-                "SELECT id FROM users WHERE callsign = ?", (body.callsign,)
-            ).fetchone()
-            if by_callsign:
-                # Update existing user's key and route (same person, new phone/install)
-                # Keep the OLD id — all channels/memberships stay linked
-                conn.execute(
-                    "UPDATE users SET route = ?, public_key = ? WHERE callsign = ?",
-                    (body.route, body.public_key, body.callsign),
-                )
-                # Return the OLD user_id so the app uses it
-                return {"ok": True, "user_id": by_callsign["id"], "existing": True}
-            else:
-                conn.execute(
-                    "INSERT INTO users (id, callsign, route, public_key, created_at) VALUES (?,?,?,?,?)",
-                    (body.user_id, body.callsign, body.route, body.public_key, time.time()),
-                )
-        # The very first account on a fresh server owns the default private channel.
-        # REMOVED: user creates channels manually via the app UI.
-        _ = is_first_user  # noqa: F841 — kept for future use
+            conn.execute(
+                "INSERT INTO users (id, callsign, route, public_key, created_at) VALUES (?,?,?,?,?)",
+                (body.user_id, body.callsign, body.route, body.public_key, time.time()),
+            )
+        _ = is_first_user  # noqa: F841
     return {"ok": True, "first_user": is_first_user}
 
 

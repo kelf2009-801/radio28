@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pointycastle/export.dart' as pc;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/models.dart';
 
@@ -90,22 +91,28 @@ class AuthService {
   }
 
   /// First-run registration: generate keypair, register on server.
-  /// If callsign already exists on server — adopt that user's ID (same person, new install).
+  /// Device ID is stable across reinstalls (stored in SharedPreferences).
   Future<Profile> register({
     required String callsign,
     String? route,
     String? avatarPath,
   }) async {
-    // Check if we already have keys (reinstall with same keys)
+    // Get or create stable device ID
+    final prefs = await SharedPreferences.getInstance();
+    String? deviceId = prefs.getString('device_id');
+    if (deviceId == null) {
+      deviceId = const Uuid().v4();
+      await prefs.setString('device_id', deviceId);
+    }
+
+    // Generate or load keys
     final existingPriv = await _storage.read(key: _kPrivKey);
     final existingPub = await _storage.read(key: _kPubKey);
     
     if (existingPriv != null && existingPub != null) {
-      // We have keys — load them, don't regenerate
       _priv = _parsePrivateKey(existingPriv);
       _pub = _parsePublicKey(existingPub);
     } else {
-      // First time — generate new keypair
       final pair = _generateRsaKeyPair();
       _priv = pair.privateKey as pc.RSAPrivateKey;
       _pub = pair.publicKey as pc.RSAPublicKey;
@@ -114,10 +121,9 @@ class AuthService {
     }
 
     final pubPem = _encodePublicKeyToPem(_pub!);
-
-    // Use public key fingerprint as stable ID (same key = same person, survives reinstall)
-    // Only changes if user clears app data (new keys generated)
-    final stableId = 'user_${sha256.convert(utf8.encode(pubPem)).toString().substring(0, 16)}';
+    
+    // Use device ID as stable user ID
+    final stableId = 'device_$deviceId';
 
     profile = Profile(
       userId: stableId,

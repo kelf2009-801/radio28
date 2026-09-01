@@ -6,7 +6,8 @@ class Profile {
   final String callsign;
   final String? route;
   final String publicKeyPem;
-  final String? avatarPath; // local file path (avatar photo picked from gallery)
+  final String? avatarPath; // local file path
+  final String? avatarBase64; // base64 encoded for server
 
   const Profile({
     required this.userId,
@@ -14,6 +15,7 @@ class Profile {
     this.route,
     required this.publicKeyPem,
     this.avatarPath,
+    this.avatarBase64,
   });
 
   Map<String, dynamic> toJson() => {
@@ -32,12 +34,13 @@ class Profile {
         avatarPath: j['avatar_path'] as String?,
       );
 
-  Profile copyWith({String? callsign, String? route, String? avatarPath}) => Profile(
+  Profile copyWith({String? callsign, String? route, String? avatarPath, String? avatarBase64}) => Profile(
         userId: userId,
         callsign: callsign ?? this.callsign,
         route: route ?? this.route,
         publicKeyPem: publicKeyPem,
         avatarPath: avatarPath ?? this.avatarPath,
+        avatarBase64: avatarBase64 ?? this.avatarBase64,
       );
 
   String encode() => jsonEncode(toJson());

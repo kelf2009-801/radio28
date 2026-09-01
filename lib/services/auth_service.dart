@@ -80,12 +80,13 @@ class AuthService {
   }
 
   /// Update profile fields (settings screen) — re-register on server with same key.
-  Future<void> updateProfile({String? callsign, String? route, String? avatarPath}) async {
+  Future<void> updateProfile({String? callsign, String? route, String? avatarPath, String? avatarBase64}) async {
     if (profile == null) return;
     profile = profile!.copyWith(
       callsign: callsign ?? profile!.callsign,
       route: route ?? profile!.route,
       avatarPath: avatarPath ?? profile!.avatarPath,
+      avatarBase64: avatarBase64 ?? profile!.avatarBase64,
     );
     await _storage.write(key: _kProfile, value: profile!.encode());
   }

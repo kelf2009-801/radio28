@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -373,8 +374,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         imageQuality: 80,
       );
       if (picked == null) return;
+      // Convert to base64 for server
+      final bytes = await File(picked.path).readAsBytes();
+      final base64 = base64Encode(bytes);
       final a = widget.auth;
-      await a.updateProfile(avatarPath: picked.path);
+      await a.updateProfile(avatarPath: picked.path, avatarBase64: base64);
       try {
         await widget.api.registerOnServer();
       } catch (_) {}

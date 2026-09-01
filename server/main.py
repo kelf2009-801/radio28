@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS users (
     callsign TEXT NOT NULL,
     route TEXT,
     public_key TEXT NOT NULL,
+    avatar_path TEXT,
     created_at REAL NOT NULL
 );
 CREATE TABLE IF NOT EXISTS channels (
@@ -234,6 +235,7 @@ class RegisterBody(BaseModel):
     callsign: str
     route: Optional[str] = None
     public_key: str
+    avatar_path: Optional[str] = None
 
 
 class LoginBody(BaseModel):
@@ -635,7 +637,7 @@ def members(cid: int, user: sqlite3.Row = Depends(current_user)):
             if not m:
                 raise HTTPException(403, "not_a_member")
         rows = conn.execute(
-            "SELECT m.user_id, m.role, m.muted, m.deafened, u.callsign, u.route "
+            "SELECT m.user_id, m.role, m.muted, m.deafened, u.callsign, u.route, u.avatar_path "
             "FROM members m JOIN users u ON u.id = m.user_id WHERE m.channel_id = ?",
             (cid,),
         ).fetchall()
@@ -650,6 +652,7 @@ def members(cid: int, user: sqlite3.Row = Depends(current_user)):
                     "online": r["user_id"] in online,
                     "muted": bool(r["muted"]),
                     "deafened": bool(r["deafened"]),
+                    "avatar_path": r["avatar_path"],
                 }
                 for r in rows
             ]

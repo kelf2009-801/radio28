@@ -100,6 +100,7 @@ class Member {
   final bool muted;
   final bool deafened;
   final bool speaking;
+  final String? avatarPath; // photo from profile
 
   const Member({
     required this.userId,
@@ -110,9 +111,10 @@ class Member {
     this.muted = false,
     this.deafened = false,
     this.speaking = false,
+    this.avatarPath,
   });
 
-  Member copyWith({bool? online, bool? muted, bool? deafened, bool? speaking, String? role}) => Member(
+  Member copyWith({bool? online, bool? muted, bool? deafened, bool? speaking, String? role, String? avatarPath}) => Member(
         userId: userId,
         callsign: callsign,
         route: route,
@@ -121,6 +123,7 @@ class Member {
         muted: muted ?? this.muted,
         deafened: deafened ?? this.deafened,
         speaking: speaking ?? this.speaking,
+        avatarPath: avatarPath ?? this.avatarPath,
       );
 
   factory Member.fromJson(Map<String, dynamic> j) => Member(
@@ -131,6 +134,7 @@ class Member {
         online: j['online'] as bool? ?? false,
         muted: j['muted'] as bool? ?? false,
         deafened: j['deafened'] as bool? ?? false,
+        avatarPath: j['avatar_path'] as String?,
       );
 
   String get initial => callsign.isEmpty ? '?' : callsign[0].toUpperCase();

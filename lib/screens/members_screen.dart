@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
@@ -41,8 +42,12 @@ class _MemberAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // If member has avatarPath (from profile) — show photo, else initial
-    // Note: Member model doesn't have avatarPath yet — using initial with color
+    // Show photo if available, else initial with color
+    if (member.avatarPath != null && member.avatarPath!.isNotEmpty) {
+      return CircleAvatar(
+        backgroundImage: FileImage(File(member.avatarPath!)),
+      );
+    }
     final bgColor = speaking
         ? AppTheme.accent
         : member.online

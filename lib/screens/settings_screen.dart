@@ -78,16 +78,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _group('Профиль', [
             ListTile(
-              leading: const Icon(Icons.search, color: AppTheme.textSecondary),
-              title: const Text('Поиск каналов'),
-              subtitle: const Text('Найти канал по названию',
+              leading: const Icon(Icons.photo_camera_outlined, color: AppTheme.textSecondary),
+              title: const Text('Фото профиля'),
+              subtitle: const Text('Выбрать из галереи',
                   style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
               trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
-              onTap: () {
-                Navigator.pop(context); // close settings
-                // Switch to Home tab (search) — handled by parent
-                // For now: just close settings, user taps search manually
-              },
+              onTap: _pickAvatarPhoto,
             ),
           ]),
           if (ch != null) ...[

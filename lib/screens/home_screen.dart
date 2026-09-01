@@ -403,6 +403,12 @@ class _HomeScreenState extends State<HomeScreen> {
             _drawerItem(Icons.radio, 'Мои каналы', 2),
             _drawerItem(Icons.star_outline, 'Избранное', 3),
             const Divider(color: AppTheme.border),
+            _drawerItem(Icons.search, 'Поиск каналов', null, onTap: () {
+              Navigator.pop(context);
+              // Switch to All Channels tab and focus search
+              setState(() => _tabIndex = 0);
+              // TODO: focus search field
+            }),
             _drawerItem(Icons.history, 'История', null, onTap: () {
               Navigator.pop(context);
               // TODO: open history

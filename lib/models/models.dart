@@ -30,8 +30,9 @@ class Profile {
         userId: j['user_id'] as String,
         callsign: j['callsign'] as String,
         route: j['route'] as String?,
-        publicKeyPem: j['public_key'] as String? ?? '',
+        publicKeyPem: j['public_key'] as String,
         avatarPath: j['avatar_path'] as String?,
+        avatarBase64: j['avatar_base64'] as String?,
       );
 
   Profile copyWith({String? callsign, String? route, String? avatarPath, String? avatarBase64}) => Profile(

@@ -91,7 +91,7 @@ class AuthService {
   }
 
   /// First-run registration: generate keypair, register on server.
-  /// Device ID is stable across reinstalls (stored in SharedPreferences).
+  /// If user exists with same callsign — adopt their ID (same person, new install).
   Future<Profile> register({
     required String callsign,
     String? route,

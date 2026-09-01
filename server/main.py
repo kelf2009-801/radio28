@@ -438,17 +438,8 @@ def create_channel(body: ChannelBody, user: sqlite3.Row = Depends(current_user))
                     (cid, other_id, "member", time.time()),
                 )
         # Auto-add 3 demo users so creator can test admin features
-        demo_users = [("Серёга", "№28"), ("Михалыч", "№5"), ("Витёк", "№15")]
-        for callsign, route in demo_users:
-            uid = str(uuid.uuid4())
-            conn.execute(
-                "INSERT INTO users (id, callsign, route, public_key, created_at) VALUES (?,?,?,?,?)",
-                (uid, callsign, route, "demo-key", time.time()),
-            )
-            conn.execute(
-                "INSERT INTO members (channel_id, user_id, role, joined_at) VALUES (?,?,?,?)",
-                (cid, uid, "member", time.time()),
-            )
+        # REMOVED: demo users not needed in production
+        pass
         row = conn.execute("SELECT * FROM channels WHERE id = ?", (cid,)).fetchone()
         return {"channel": _channel_json(conn, row, user["id"])}
 

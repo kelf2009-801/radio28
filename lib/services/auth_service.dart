@@ -33,7 +33,7 @@ class AuthService {
 
   static const defaultServer = String.fromEnvironment(
     'RADIO_SERVER',
-    defaultValue: 'https://manufacturer-non-assurance-initial.trycloudflare.com',
+    defaultValue: 'http://45.147.31.67:8000',
   );
 
   Future<String> get serverUrl async {

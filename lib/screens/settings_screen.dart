@@ -379,9 +379,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final base64 = base64Encode(bytes);
       final a = widget.auth;
       await a.updateProfile(avatarPath: picked.path, avatarBase64: base64);
+      // Send to server immediately
       try {
         await widget.api.registerOnServer();
-      } catch (_) {}
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Ошибка загрузки фото: $e')),
+          );
+        }
+        return;
+      }
       if (mounted) setState(() {});
     } catch (_) {}
   }

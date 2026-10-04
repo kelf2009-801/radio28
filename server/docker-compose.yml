@@ -12,6 +12,13 @@ services:
     networks:
       - radio
 
+  coturn:
+    image: coturn/coturn:4.6
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+
   api:
     build: .
     restart: unless-stopped

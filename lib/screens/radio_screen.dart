@@ -214,8 +214,14 @@ class _RadioScreenState extends State<RadioScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.people_outline, color: AppTheme.textSecondary),
-                    onPressed: widget.onOpenMembers,
+                    icon: const Icon(Icons.person_add_alt, color: AppTheme.accent),
+                    tooltip: 'Запросы на вход',
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RequestsScreen(channel: widget.channel, api: widget.api),
+                      ),
+                    ),
                   ),
                 ],
               ),

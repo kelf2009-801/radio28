@@ -3,14 +3,9 @@ services:
     image: livekit/livekit-server:v1.10
     command: --config /etc/livekit.yaml
     restart: unless-stopped
-    ports:
-      - "7880:7880"          # WS API
-      - "7881:7881"          # RTC TCP
-      - "7882:7882/udp"      # RTC UDP (mux)
+    network_mode: host          # WebRTC needs the full UDP media range + real public IP
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml:ro
-    networks:
-      - radio
 
   coturn:
     image: coturn/coturn:4.6
